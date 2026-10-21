@@ -6,13 +6,13 @@
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. This lecture has no hidden material, so nothing in this guide carries the † mark.
 
-**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
+**How to read this guide.** Every part starts with **In one sentence**, the whole idea in one line. Then comes the explanation in small steps, a **Kid example** (the same idea told with everyday things), pictures, and a **Remember** list with what you must know for the exam. **Technical clarification** marks a place where the slides are wrong or unclear, and gives the correct version. **Additional context** adds something useful that is not on the slides.
 
 ---
 
 ## Glossary
 
-| Term | Expansion or category | Meaning |
+| Term | Full name | Meaning in simple words |
 |---|---|---|
 | AColors | All Colors | In Figure 7.2: the set of colours of **all** of Pi's neighbours. |
 | Adjustment measure | — | The largest number of processors that must change their state after **one** topology change (starting from a legitimate state) before the system is legitimate again. |
@@ -40,6 +40,7 @@
 
 ## Contents
 
+- [Before you start: the words you need](#before-you-start-the-words-you-need)
 - [1. Superstabilization](#1-superstabilization)
   - [1.1 What this lecture is about](#11-what-this-lecture-is-about)
   - [1.2 Dynamic algorithms vs self-stabilizing algorithms](#12-dynamic-algorithms-vs-self-stabilizing-algorithms)
@@ -64,9 +65,33 @@
   - [4.4 Related quiz topics not on the slides](#44-related-quiz-topics-not-on-the-slides)
 - [Revision notes and references](#revision-notes-and-references)
 
+## Before you start: the words you need
+
+- **Topology:** the shape of the network: which processors are connected by which links.
+- **Topology change:** a link or a processor is **added** or **removed** (a cable is plugged in, a router reboots).
+- **Legitimate state (safe):** everything is correct and stays correct.
+- **Self-stabilizing:** from **any** mess, the system becomes correct **in the end**, but may behave badly on the way.
+- **Superstabilizing:** self-stabilizing **plus**: after **one** small topology change from a correct state, it stays "nearly correct" while repairing, and repairs **fast**.
+- **Graph colouring:** give every processor a colour so that **no two neighbours have the same colour**.
+
+**The difference in one picture:**
+
+```mermaid
+flowchart LR
+  A["correct state"] -- "one topology change" --> B["small problem"]
+  B -- "self-stabilizing:<br/>anything may happen on the way,<br/>maybe many changes" --> C["correct again"]
+  B -- "superstabilizing:<br/>stays nearly correct,<br/>very few changes, fast" --> C
+```
+
+> **Kid example.** A class sits so that no two friends next to each other wear the same colour of hat. A new child sits down between two others. A "self-stabilizing" class might make almost everybody swap hats until it works again. A "superstabilizing" class lets only the new child (or one neighbour) pick a different hat, right away, and nobody ever sits next to the same colour on the way.
+
 ## 1. Superstabilization
 
+**What this chapter is about:** what superstabilization means, the passage predicate that must hold during the repair, how it is measured, and why it is worth it.
+
 ### 1.1 What this lecture is about
+
+**In one sentence:** after one small change to a perfect network, the algorithm should stay well-behaved while repairing and repair quickly; such algorithms are called superstabilizing.
 
 Real networks change all the time: a cable is plugged in, a router reboots, a wireless link comes and goes. Earlier in the course, such a change was treated like a **transient fault**: the self-stabilizing algorithm simply sees a strange new state and converges again "eventually", with no promise about what happens on the way.
 
@@ -77,7 +102,17 @@ This lecture asks for more. If the network was in a perfect state and only **one
 
 An algorithm that does this, and is still self-stabilizing, is called **superstabilizing**. The lecture shows the idea with one task, **graph colouring**, and compares two algorithms: a plain self-stabilizing one (Figure 7.1) and a superstabilizing one (Figure 7.2).
 
+> **Kid example.** If one tile falls off a mosaic, you do not want to re-lay the whole floor. You want to fix that one spot, quickly, without ever making the floor look worse while you work.
+
+**Remember:**
+
+- Earlier: a topology change = a **transient fault**; only eventual convergence was promised.
+- Now: after **one** change from a perfect state, stay **well-behaved** (passage predicate) and repair **quickly**, touching few processors.
+- Example task: **graph colouring**, Figure 7.1 (self-stabilizing) versus Figure 7.2 (superstabilizing).
+
 ### 1.2 Dynamic algorithms vs self-stabilizing algorithms
+
+**In one sentence:** dynamic algorithms behave well at all times but only from a known start; self-stabilizing algorithms start from anything but only promise the end; superstabilizing gets both.
 
 Two traditions deal with networks that change.
 
@@ -109,7 +144,17 @@ flowchart TB
 
 Those assumptions do not always hold in practice. Dolev recalls his §3.2 result: when crashes are possible and the link capacity is not known, an **arbitrary** configuration can be reached, which only a self-stabilizing algorithm can handle.
 
+> **Kid example.** A **dynamic** algorithm is like a careful driver who only drives on roads they know: always safe, but lost on a strange road. A **self-stabilizing** one is like a driver who always finds home from anywhere, but may drive wildly on the way. A **superstabilizing** one finds home from anywhere **and** drives calmly after a small detour.
+
+**Remember:**
+
+- **Dynamic**: predefined start, restricted failures, **few adjustments**, guarantees **at all times**; hidden assumptions (detected corrupted messages, bounded links).
+- **Self-stabilizing**: **any** start, guarantee only **eventually**; topology change = new state.
+- **Superstabilizing**: combines the benefits of both.
+
 ### 1.3 What makes an algorithm superstabilizing
+
+**In one sentence:** it must be self-stabilizing, must keep a passage predicate during the repair, and should converge fast.
 
 A **super-self-stabilizing** algorithm:
 
@@ -121,7 +166,19 @@ The **passage predicate** is defined with respect to a **class of topology chang
 
 **Additional context (Dolev §7.1).** Dolev's words: when started in a safe configuration and a topology change occurs, a superstabilizing algorithm "converges to a new safe configuration in a graceful manner". Ideally the passage predicate is "the strongest predicate that holds when a legitimate state undergoes a topology change event".
 
+```mermaid
+flowchart LR
+  A["1. self-stabilizing<br/>(MUST)"] ~~~ B["2. keeps a passage predicate<br/>(MUST)"] ~~~ C["3. converges fast<br/>(SHOULD)"]
+```
+
+**Remember:**
+
+- Three parts: **must** be self-stabilizing, **must** preserve a **passage predicate**, **should** converge fast.
+- Passage predicate: defined for a **class of topology changes**; **weaker than legitimacy** but still **useful**.
+
 ### 1.4 The passage predicate: the token ring example
+
+**In one sentence:** in a token ring, "exactly one token" is legitimate, and "at most one token" is the passage predicate that must hold even right after a crash.
 
 The standard example is a **token ring**:
 
@@ -143,7 +200,16 @@ stateDiagram-v2
 
 **Additional context (Dolev §7.1, quiz 15 Q3).** The same idea for **leader election**: the passage predicate is "**no more than one** leader exists". If the leader crashes there may briefly be zero leaders, but there must never be two. A common wrong answer is "at least one leader": a crash of the leader breaks that rule at once.
 
+> **Kid example.** In a game of "pass the talking stick", the stick may get lost for a moment when a child leaves (zero sticks), and that is acceptable for a short while. What must **never** happen is two sticks at once. "At most one stick" is the rule that holds the whole time.
+
+**Remember:**
+
+- Token ring: legitimate = **exactly one** token; passage predicate = **at most one** token.
+- Leader election: passage predicate = **no more than one** leader (not "at least one").
+
 ### 1.5 How we measure a superstabilizing algorithm
+
+**In one sentence:** superstabilizing time counts rounds back to legitimate after one change; the adjustment measure counts how many processors must change state.
 
 Two measures are added, on top of the usual time to stabilize from any state:
 
@@ -152,7 +218,17 @@ Two measures are added, on top of the usual time to stabilize from any state:
 
 **Additional context (Dolev §7.1, quiz 15 Q13).** Speed and keeping the passage predicate are **orthogonal** (independent): an algorithm can be fast but break the passage predicate on the way, or keep the predicate but be slow. A superstabilizing algorithm needs both.
 
+> **Kid example.** After the new child sits down: how many minutes until all hats are fine again (time), and how many children had to swap hats (adjustment)?
+
+**Remember:**
+
+- **Superstabilizing time**: max rounds from legitimate, through **one** topology change, back to legitimate.
+- **Adjustment measure**: max number of processors that must **change state**.
+- Speed and keeping the passage predicate are **orthogonal**; superstabilization needs both.
+
 ### 1.6 Why bother: the motivation
+
+**In one sentence:** topology changes are frequent while transient faults are rare, so a fast, gentle repair after a change is worth a lot.
 
 There are three reasons.
 
@@ -164,9 +240,22 @@ The next slides present a self-stabilizing and a superstabilizing algorithm for 
 
 **Additional context (Dolev §7.1, quiz 15 Q9).** Dolev's motivating example is a **spanning tree** used for virtual circuits (fixed paths between pairs of processors). When a tree link fails, the tree splits into two parts, but the circuits that lie entirely inside one part keep working. A superstabilizing repair just picks **one link** to join the two parts, so the existing circuits are not disturbed. A plain self-stabilizing algorithm might rebuild the whole tree.
 
+> **Kid example.** Big storms (transient faults) are rare, but children change seats every day (topology changes). So it is smart to make the everyday seat change smooth and quick, even if a big storm still takes longer to clean up.
+
+**Remember:**
+
+- Reacting to topology **events** gives better behaviour than treating them as transient faults.
+- Keep a **"nearly legitimate"** state during convergence.
+- **Transient faults rare, topology changes frequent** ⇒ lower worst-case time after a change matters.
+- Dolev's example: a **spanning tree** for virtual circuits; fix a broken link by adding **one** link.
+
 ## 2. Self-stabilizing graph colouring
 
+**What this chapter is about:** a simple self-stabilizing colouring algorithm, how it runs, and the chain reaction (cascade) it can cause after one new link.
+
 ### 2.1 The graph colouring task
+
+**In one sentence:** give each processor one of Δ + 1 colours so that neighbours always differ; Δ + 1 guarantees a free colour always exists.
 
 The **colouring task** is to assign a colour to each processor so that **no two neighbouring processors have the same colour**.
 
@@ -177,7 +266,24 @@ Why Δ + 1? A processor has at most Δ neighbours, so they use at most Δ differ
 
 **Additional context (Dolev §7.1).** The exact goal of a **self-stabilizing** colouring algorithm: for every two neighbours Pi and Pj, **eventually colour_i ≠ colour_j, and no colour variable changes value** any more. Dolev also assumes that adding a link or a processor never gives anyone **more than Δ neighbours**; otherwise Δ + 1 colours might run out (quiz 15 Q21).
 
+**Why Δ + 1 colours are always enough:**
+
+```mermaid
+flowchart LR
+  A["at most Δ neighbours"] --> B["they use at most<br/>Δ different colours"] --> C["palette has Δ + 1:<br/>at least ONE colour is free"]
+```
+
+> **Kid example.** You have at most 3 friends sitting next to you, so they wear at most 3 different hat colours. If there are 4 colours in the box, at least one colour is always free for you.
+
+**Remember:**
+
+- Neighbours must have **different** colours; using few colours is **not** required.
+- **Δ + 1 colours**, Δ = upper bound on the number of neighbours ⇒ a free colour always exists.
+- Goal: eventually neighbours differ **and no colour changes any more**. Assume no change pushes a degree above Δ.
+
 ### 2.2 The self-stabilizing colouring algorithm (Figure 7.1)
+
+**In one sentence:** if you have the same colour as a neighbour with a bigger ID, pick a colour none of your bigger-ID neighbours has.
 
 Here is the code that processor Pi runs (Dolev's Figure 7.1; Algorithm 17 on the exam cheat sheet):
 
@@ -220,7 +326,18 @@ flowchart TB
 
 **Technical clarification.** The lecture shows line 2 as "GColors := 0"; it means the empty set ∅ (Dolev writes ∅). "choose(\\ GColors)" means "choose a colour from the palette minus GColors".
 
+> **Kid example.** The rule for hats: "If you wear the same colour as a neighbour who is **older** (bigger ID) than you, change to a colour none of your older neighbours wears. Never worry about younger neighbours: they will move for you." The oldest child never has to move, so nobody can chase anybody in circles.
+
+**Remember:**
+
+- **GColors** = colours of neighbours with a **greater ID**.
+- If color_i ∈ GColors ⇒ color_i := **choose(\\ GColors)**; then write r_i.color.
+- IDs **break symmetry**: in a clash the **smaller** ID moves; the **largest** ID never changes.
+- Figure 7.1 = **Algorithm 17** on the cheat sheet.
+
 ### 2.3 Watching Figure 7.1 run
+
+**In one sentence:** on the five-processor example, starting all blue, the algorithm reaches a correct colouring in a few rounds; the animation differs a little from the code.
 
 The lecture animates the algorithm on this graph of five processors. **All processors start blue.**
 
@@ -270,7 +387,17 @@ Every edge joins two different colours, so this is a correct colouring.
 
 In round 2, P2's GColors is {blue} (from 4 and 5), so P2 keeps red; P1 sees red among its bigger neighbours 2 and 3, so P1 moves to green. After that no processor clashes with a bigger-ID neighbour, so nothing changes any more. The real algorithm is asynchronous, so other orders give other (also correct) final colourings.
 
+> **Kid example.** Five children all start with blue hats. In the first round, every child who has an older blue neighbour switches to red; in the next round, child 1 sees an older red neighbour and switches to green. After that, nobody has an older neighbour with the same colour, and everyone stays put.
+
+**Remember:**
+
+- Example: 5 processors, **Δ = 3**, **4 colours**; all start blue.
+- Under the code, processor **4** has no bigger neighbour, so it **never** changes (the animation is wrong there).
+- Our synchronous run: correct after **2** rounds (P1 green, P2 red, P3 red, P4 blue, P5 blue).
+
 ### 2.4 Trouble after a topology change: the cascade
+
+**In one sentence:** one new link can start a chain reaction in which almost every processor changes colour, although one change would have been enough.
 
 Now the key question: **what happens when the topology changes?** If a new neighbour is added, two processors that just became neighbours may have **the same colour**. During the repair, **every processor may change its colour**.
 
@@ -312,9 +439,28 @@ The lecture asks: **"But in what cost?"** The answer: **every processor changed 
 
 **Additional context (Dolev §7.1, quiz 15).** The cascade is only **possible**, not certain: choose() may pick any free colour. In the chain Δ = 2, so there are 3 colours; if P4 had picked the third colour (say yellow) instead of red, the repair would have stopped at once. Figure 7.1 cannot guarantee that, because it only avoids the colours of **greater-ID** neighbours (GColors), not of all neighbours. That is why one local fix can create a new clash further down the chain (quiz 15 Q12).
 
+**The cascade as a chain reaction:**
+
+```mermaid
+flowchart LR
+  A["link 4–5 recovers:<br/>4 and 5 both blue"] --> B["P4 → red<br/>(now clashes with P3)"] --> C["P3 → blue<br/>(clashes with P2)"] --> D["P2 → red<br/>(clashes with P1)"] --> E["P1 → blue<br/>4 processors changed"]
+```
+
+> **Kid example.** Dominoes: one child changes hat colour, which makes the next child clash, who changes and makes the next one clash, and so on down the row. Only one child really needed to change, but four did.
+
+**Remember:**
+
+- A new link can make two neighbours **equal**; Figure 7.1 may then **recolour almost every processor** (cascade).
+- Cause: the new colour avoids only **GColors** (greater IDs), so it can clash with a smaller neighbour.
+- The cascade is **possible**, not certain (choose() might pick a safe colour).
+
 ## 3. Superstabilizing graph colouring
 
+**What this chapter is about:** the improved algorithm with ⊥ and an interrupt, which repairs a new link by changing only one processor in one cycle, and its proof.
+
 ### 3.1 The superstabilizing colouring algorithm (Figure 7.2)
+
+**In one sentence:** when a link recovers, the smaller-ID end immediately shows ⊥ ("no colour"), and later picks a colour that none of its neighbours has.
 
 We add three things to the algorithm:
 
@@ -350,30 +496,42 @@ What is new, compared with Figure 7.1:
 - **Line 10:** the new colour avoids **all** neighbours' colours (AColors), not only the greater ones. So the new choice can never start a cascade.
 - **Lines 13–16:** **recover_ij** is the interrupt Pi gets when the communication between Pi and Pj changes (the link recovers). If the other end Pj has the **greater** ID, Pi immediately sets its colour to **⊥** and publishes ⊥. The greater-ID end does nothing.
 
+**Main loop, lines 1–12:**
+
 ```mermaid
 flowchart TB
-    subgraph Loop["Main loop, lines 1-12"]
-        direction TB
-        A["Read all neighbours"] --> B["AColors = all their colours<br/>GColors = colours of greater IDs"]
-        B --> C{"my colour is ⊥<br/>or in GColors?"}
-        C -- yes --> D["pick a colour not in AColors"]
-        C -- no --> E["keep my colour"]
-        D --> F["write my colour"]
-        E --> F
-        F --> A
-    end
-    subgraph Int["Interrupt, lines 13-16"]
-        direction TB
-        G["recover(i,j) arrives"] --> H{"j > i ?"}
-        H -- yes --> I["my colour = ⊥<br/>write ⊥"]
-        H -- no --> J["do nothing"]
-    end
-    Loop ~~~ Int
+    A["Read all neighbours"] --> B["AColors = all their colours<br/>GColors = colours of greater IDs"]
+    B --> C{"my colour is ⊥<br/>or in GColors?"}
+    C -- yes --> D["pick a colour not in AColors"]
+    C -- no --> E["keep my colour"]
+    D --> F["write my colour"]
+    E --> F
+    F --> A
+```
+
+**Interrupt, lines 13–16:**
+
+```mermaid
+flowchart LR
+    G["recover(i,j) arrives"] --> H{"j > i ?"}
+    H -- yes --> I["my colour = ⊥<br/>write ⊥"]
+    H -- no --> J["do nothing"]
 ```
 
 **Technical clarification.** In the lecture, line 11 reads "Write r_i.color := color" with the subscript i missing; it means color_i. Dolev's printed Figure 7.2 (and even Figure 7.1) has the same slip. The 2017 exam printed this code too and also called δ "the number of nodes"; δ is the number of Pi's **neighbours**.
 
+> **Kid example.** New rule: when a new seat-neighbour arrives and they are **older** than you, you immediately take your hat **off** (⊥ = no hat). No hat never clashes with anyone. Then, calmly, you pick a colour that **none** of your neighbours wears, young or old, so your choice cannot start a domino chain.
+
+**Remember:**
+
+- New: **AColors** (colours of **all** neighbours), **⊥** (no colour), **interrupt** recover(i, j).
+- Line 9: change if color_i = **⊥** or in GColors; line 10: choose(\\ **AColors**).
+- Interrupt: if the link to Pj recovers and **j > i**, set color_i := **⊥** and write it. The greater-ID end does nothing.
+- Figure 7.2 = **Algorithm 18**.
+
 ### 3.2 The same example with Figure 7.2
+
+**In one sentence:** on the same chain, only processor 4 changes (blue, then ⊥, then yellow), in one cycle.
 
 Let us rerun the chain example with the new algorithm. **The new algorithm stabilizes faster than the previous one (in some cases).**
 
@@ -411,7 +569,17 @@ flowchart LR
 
 **Additional context.** In the chain Δ = 2, so the palette has 3 colours, and yellow is the only one left after removing red and blue. A free colour always exists, because AColors holds at most Δ colours and the palette has Δ + 1.
 
+> **Kid example.** The link between children 4 and 5 is back. Child 4 (the younger) takes the hat off at once. Next turn, child 4 looks around: neighbours wear red and blue, so child 4 picks yellow. Done: one child, one turn.
+
+**Remember:**
+
+- P4 gets recover(4, 5), 5 > 4 ⇒ **⊥**; P5 does nothing.
+- AColors = {blue, red} ⇒ P4 picks **yellow**; final 1 red, 2 blue, 3 red, 4 yellow, 5 blue.
+- **O(1)**, only **P4** changed.
+
 ### 3.3 Proof that Figure 7.2 is self-stabilizing
+
+**In one sentence:** after one cycle ⊥ is gone, the biggest ID never changes, and then each smaller ID settles in turn, so the system stabilizes in O(n) cycles.
 
 To be superstabilizing, an algorithm must first be **self-stabilizing**, so we prove that first.
 
@@ -438,7 +606,17 @@ flowchart LR
 
 **Additional context (Dolev §7.1, 2017 exam Q3).** Dolev states the timing: the processor with the j-th largest ID is fixed within about j cycles, so the whole system is safe within **O(n) cycles** from any starting state. This is the same order as Figure 7.1. Figure 7.2 is **not** faster from a garbage start; it is faster only after one topology change from a safe state.
 
+> **Kid example.** After one round, nobody has their hat off any more. The oldest child never has to change. The second oldest only has to dodge the oldest, who no longer moves, so they settle too. Then the third oldest, and so on, down to the youngest.
+
+**Remember:**
+
+- **Lemma 1**: Figure 7.2 is self-stabilizing (no further topology changes).
+- After cycle 1: **no ⊥**. **Pn** (largest ID) fixed. Induction: if all **Pk, i < k ≤ n**, are fixed, Pi becomes fixed.
+- From an arbitrary state: **O(n)** cycles, the **same** as Figure 7.1.
+
 ### 3.4 Passage predicate, time and adjustment for colouring
+
+**In one sentence:** for Figure 7.2: neighbours never have the same colour during the repair, the repair takes one cycle, and only one processor changes.
 
 Now the three superstabilization ideas, applied to Figure 7.2.
 
@@ -458,13 +636,34 @@ Why it holds: the moment the link recovers, the smaller-ID end shows ⊥, and �
 
 **Additional context (an assumption worth saying in the exam).** The argument needs the interrupt to run **before** the two new neighbours read each other through the new link, so that ⊥ is already there when they look. Exam model answers state this as "the interrupt is executed as part of the topology change".
 
+| Measure | Figure 7.1 | Figure 7.2 |
+|---|---|---|
+| Passage predicate "neighbours always differ" during the repair | not kept (a cascade passes through clashes) | **kept** (⊥ never clashes) |
+| Time after one topology change | O(n) | **O(1)**, one cycle |
+| Processors that change | up to almost all | **one** (the smaller-ID end) |
+| Time from an arbitrary state | O(n) | O(n) |
+
+> **Kid example.** With the new rule, the class never has two neighbours in the same colour, even for a second, the fix takes one turn, and only one child changes hat.
+
+**Remember:**
+
+- Passage predicate: **neighbours' colours always differ** (single topology change from a safe state).
+- Superstabilizing time **O(1)** (one cycle) versus **O(n)**; adjustment measure **one** processor (link removal: none).
+- Assumption: the interrupt runs **as part of** the topology change, before the new neighbours read each other.
+
 ## 4. Summary and review
 
+**What this chapter is about:** the reading, the whole lecture on one page, old exam questions and extra quiz points.
+
 ### 4.1 Reading
+
+**In one sentence:** the reading is the 1997 paper by Dolev and Herman on superstabilizing protocols.
 
 The reading for this lecture is Shlomi Dolev and Ted Herman, *Superstabilizing Protocols for Dynamic Distributed Systems*, Chicago Journal of Theoretical Computer Science, 1997 (cjtcs.cs.uchicago.edu/articles/1997/4/cj97-04.pdf).
 
 ### 4.2 Recap
+
+**In one sentence:** superstabilizing = self-stabilizing + passage predicate + fast; for colouring, ⊥ and an interrupt turn an O(n) cascade into a one-processor, one-cycle repair.
 
 - **Dynamic algorithms:** predefined start, restricted failures, guarantees at all times. **Self-stabilizing:** any start, guarantee only in the end. **Superstabilizing:** both.
 - **Definition:** must be self-stabilizing, must preserve a **passage predicate**, should converge fast. The passage predicate is **weaker than legitimacy** but still useful (token ring: at most one token; leader election: at most one leader).
@@ -474,7 +673,17 @@ The reading for this lecture is Shlomi Dolev and Ted Herman, *Superstabilizing P
   - **Figure 7.2 (Algorithm 18):** AColors + **⊥** + **interrupt**. The smaller-ID end of a recovered link sets ⊥, then picks a colour outside AColors. Passage predicate "neighbours always differ" holds; **1 cycle**, **1 processor**. From an arbitrary state it is still O(n).
 - **Why:** transient faults are rare, topology changes are frequent.
 
+```mermaid
+flowchart LR
+  A["Figure 7.1:<br/>dodge bigger IDs only"] -- "one new link" --> B["possible cascade:<br/>O(n), many change"]
+  C["Figure 7.2:<br/>⊥ + AColors + interrupt"] -- "one new link" --> D["1 cycle,<br/>1 processor changes"]
+```
+
+> **Kid example.** The whole story: a class keeps neighbours in different hat colours. The simple rule fixes any mess in the end, but one new seat-neighbour can make a whole row swap hats. The super rule takes the younger child's hat off at once and then picks a colour nobody nearby has, so one child, one turn, and never a clash on the way.
+
 ### 4.3 Old exam questions on this lecture
+
+**In one sentence:** the exams ask for the definition, the comparison with self-stabilization, the O(n) bounds of both algorithms and colouring variants.
 
 On the exam cheat sheet, **Algorithm 17** is Figure 7.1 and **Algorithm 18** is Figure 7.2.
 
@@ -502,7 +711,15 @@ On the exam cheat sheet, **Algorithm 17** is Figure 7.1 and **Algorithm 18** is 
 
 **Exam tip.** "Superstabilizing" = self-stabilizing + passage predicate + fast. If a question asks whether it is faster "from an arbitrary state", the answer is **no** (both O(n)); it is faster only after **one** topology change from a legal state.
 
+**Remember:**
+
+- Cheat sheet: **Algorithm 17** = Figure 7.1, **Algorithm 18** = Figure 7.2.
+- No self-stabilizing solution ⇒ no superstabilizing one (**TRUE**).
+- From an **arbitrary** state both are **O(n)**; Figure 7.2 is faster only after **one** topology change from a legal state.
+
 ### 4.4 Related quiz topics not on the slides
+
+**In one sentence:** extra quiz points about dynamic algorithms, GColors, ⊥ and why time is measured from a legitimate state.
 
 The course's pre-lecture quiz on this chapter (quiz 15, 30 questions on Dolev §7.1) follows the lecture closely. Points it asks that the lecture leaves implicit:
 
