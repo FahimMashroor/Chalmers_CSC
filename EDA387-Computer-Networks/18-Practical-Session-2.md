@@ -2,19 +2,19 @@
 
 **Course:** EDA387/DIT663 Computer Networks, part 2 (Fault-tolerant Algorithms for Computer Networks), Practical Session 2 (2025 edition).
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material.
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context that is not in the session material, such as a worked example or a check of the reasoning. **Honest note** marks a place where the lecture is imprecise. **Kid example** retells an idea with an everyday picture. Everything else follows the session.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
-> **Numbering warning.** The "Theorem 2.1", "Claim 2.2", "Claim 2.3" and "Lemma 2.4" in this guide are the numbers used **inside this homework solution**. They are **not** the theorems with the same numbers in Dolev's book (where Theorem 2.1 is about Dijkstra's algorithm). Likewise, "Question 1/2/3" are the 2025 home-assignment numbers; in the 2026 assignment the same problems are Home Assignment 2, Questions 1 and 2.
+**Numbering warning.** The "Theorem 2.1", "Claim 2.2", "Claim 2.3" and "Lemma 2.4" in this guide are the numbers used **inside this homework solution**. They are **not** the theorems with the same numbers in Dolev's book (where Theorem 2.1 is about Dijkstra's algorithm). Likewise, "Question 1/2/3" are the 2025 home-assignment numbers; in the 2026 assignment the same problems are Home Assignment 2, Questions 1 and 2.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | altOneZero(*k*) | alternating one-zero | The sequence (1, 0, 1, 0, …) of length *k*, starting with 1. |
 | Asynchronous cycle | — | A stretch of an execution in which every processor runs its code at least once. |
@@ -33,28 +33,23 @@
 | SL-game | Scheduler-luck game | The game used to analyse randomized self-stabilizing algorithms: an adversary scheduler against "luck". |
 | Vertex coloring | — | Giving every processor a colour so that neighbours have different colours. |
 
----
+## Contents
 
-## Table of contents
+- [1. The setting](#1-the-setting)
+  - [1.1 What the session covers](#11-what-the-session-covers)
+  - [1.2 The setting: Dijkstra's directed ring](#12-the-setting-dijkstras-directed-ring)
+- [2. Colouring and matching on the ring](#2-colouring-and-matching-on-the-ring)
+  - [2.1 Optimal vertex coloring of the ring (Question 1)](#21-optimal-vertex-coloring-of-the-ring-question-1)
+  - [2.2 Maximum matching on the ring (Questions 2 and 3)](#22-maximum-matching-on-the-ring-questions-2-and-3)
+- [3. Leader-election review](#3-leader-election-review)
+  - [3.1 Pre-lecture review questions: leader election](#31-pre-lecture-review-questions-leader-election)
+- [4. Summary](#4-summary)
+  - [4.1 Recap](#41-recap)
+- [Revision notes and references](#revision-notes-and-references)
 
-1. [What the session covers](#1-what-the-session-covers)
-2. [The setting: Dijkstra's directed ring](#2-the-setting-dijkstras-directed-ring)
-3. [Optimal vertex coloring of the ring (Question 1)](#3-optimal-vertex-coloring-of-the-ring-question-1)
-   - [3.1 How many colours are needed?](#31-how-many-colours-are-needed)
-   - [3.2 Algorithm 3](#32-algorithm-3)
-   - [3.3 A worked execution](#33-a-worked-execution)
-4. [Maximum matching on the ring (Questions 2 and 3)](#4-maximum-matching-on-the-ring-questions-2-and-3)
-   - [4.1 The problem †](#41-the-problem-)
-   - [4.2 Algorithm 4](#42-algorithm-4)
-   - [4.3 Correctness with convergence stairs](#43-correctness-with-convergence-stairs)
-5. [Pre-lecture review questions: leader election](#5-pre-lecture-review-questions-leader-election)
-   - [5.1 Leader election in general graphs](#51-leader-election-in-general-graphs)
-   - [5.2 Leader election in complete graphs](#52-leader-election-in-complete-graphs)
-6. [Recap](#6-recap)
+## 1. The setting
 
----
-
-## 1. What the session covers
+### 1.1 What the session covers
 
 The session plan was:
 
@@ -63,9 +58,9 @@ The session plan was:
 3. Home Assignment 3 (introduced).
 4. A repetition of the lecture on **leader election in general graphs**.
 
-## 2. The setting: Dijkstra's directed ring
+### 1.2 The setting: Dijkstra's directed ring
 
-> **Beyond the slides.** The setting below comes from the home-assignment text, which the solution builds on.
+**Additional context.** The setting below comes from the home-assignment text, which the solution builds on.
 
 The processors *p*₀, …, *p*ₙ₋₁ sit on the **directed ring** that Dijkstra used for his token-circulation algorithm:
 
@@ -81,9 +76,11 @@ flowchart LR
 
 Each arrow points from a processor to the processor that **reads** its variable: *p*₁ reads *x*₀, *p*₂ reads *x*₁, and *p*₀ reads *x*ₙ₋₁.
 
-## 3. Optimal vertex coloring of the ring (Question 1)
+## 2. Colouring and matching on the ring
 
-### 3.1 How many colours are needed?
+### 2.1 Optimal vertex coloring of the ring (Question 1)
+
+#### How many colours are needed?
 
 The **chromatic number** of a graph is the smallest *k* such that the graph can be coloured correctly with *k* colours (no two neighbours with the same colour). For a ring:
 
@@ -92,7 +89,7 @@ The **chromatic number** of a graph is the smallest *k* such that the graph can 
 
 An **optimal** algorithm must therefore use 2 colours on even rings and 3 colours on odd rings.
 
-### 3.2 Algorithm 3
+#### Algorithm 3
 
 ```text
 Algorithm 3: Self-stabilizing vertex-coloring for networks with the
@@ -111,11 +108,9 @@ Read "*x*₍ᵢ₋₁₎ + 1 mod 2" as (*x*₍ᵢ₋₁₎ + 1) mod 2: the oppos
 
 Why this gives the right answer: once the root holds 0 or 2, *p*₁ gets 1 in both cases, then *p*₂ gets 0, *p*₃ gets 1, and so on: *xₖ* = 1 for odd *k* and 0 for even *k* ≥ 2. The last processor *p*ₙ₋₁ therefore has colour 1 when *n* is even (its index *n* − 1 is odd), so the root takes 0; and colour 0 when *n* is odd, so the root takes 2. This is exactly the optimal colouring from §3.1.
 
-> **Kid example.** Children stand in a circle, each looking at the back of the child in front. Every ordinary child follows one rule: "wear the opposite of the child in front of me" (white = 0 or black = 1). The leader has a different rule: "if the last child wears black, I wear white; if the last child wears white, I wear green (2)". Whether the leader wears white or green, the next child wears black, so black, white, black, white spreads around the circle. On an even circle the last child ends up black and the leader stays white. On an odd circle the last child ends up white, so the leader must wear green: the only way to close an odd circle.
+#### A worked execution
 
-### 3.3 A worked execution
-
-> **Beyond the slides.** A simulation with *n* = 5, starting from the corrupted configuration (*x*₀, …, *x*₄) = (1, 2, 2, 0, 2). In each cycle the processors run in the order *p*₀, *p*₁, …, *p*₄.
+**Additional context.** A simulation with *n* = 5, starting from the corrupted configuration (*x*₀, …, *x*₄) = (1, 2, 2, 0, 2). In each cycle the processors run in the order *p*₀, *p*₁, …, *p*₄.
 
 | After | *x*₀ | *x*₁ | *x*₂ | *x*₃ | *x*₄ | What happened |
 |---|---|---|---|---|---|---|
@@ -126,15 +121,15 @@ Why this gives the right answer: once the root holds 0 or 2, *p*₁ gets 1 in bo
 
 The final state (2, 1, 0, 1, 0) is the optimal 3-colouring of an odd ring, and running the algorithm again changes nothing.
 
-## 4. Maximum matching on the ring (Questions 2 and 3)
+### 2.2 Maximum matching on the ring (Questions 2 and 3)
 
-### 4.1 The problem †
+#### The problem †
 
 † The formal statement appears only in the hidden material; the solution itself (§4.2 and §4.3) is visible.
 
 The **maximum matching** problem matters for resource allocation, communication and network design. It asks for the largest set of pairs of neighbouring processors (edges) such that no two pairs share a processor. Formally, a matching *M* ⊆ {(*pᵢ*, *p*₍ᵢ₋₁₎ mod *n*) : *pᵢ* ∈ *P*} is a subset of neighbouring pairs such that, for any two pairs (*pᵢ*, *p*₍ᵢ₋₁₎ mod *n*) and (*pⱼ*, *p*₍ⱼ₋₁₎ mod *n*) in *M*, *p*₍ᵢ₋₁₎ mod *n* ≠ *pⱼ* and *p*₍ⱼ₋₁₎ mod *n* ≠ *pᵢ*. The goal is a matching with the maximum number of pairs. The task: design a **deterministic self-stabilizing** maximum matching algorithm that is always optimal after stabilization, assuming *n* is known.
 
-### 4.2 Algorithm 4
+#### Algorithm 4
 
 The trick is to **reuse the colouring of Algorithm 3** and read the colours as matching instructions.
 
@@ -155,16 +150,14 @@ Algorithm 4: Self-stabilizing maximum matching for networks with the
 
 So colour **0** means "I am paired with the processor before me", colour **1** means "I am paired with the processor after me", and colour **2** means "I am single".
 
-> **Kid example.** The same shirts become dance instructions. White means "I dance with the child in front of me", black means "I dance with the child behind me", and green means "I sit this dance out". Two neighbours in black-then-white are a dancing pair, and on an odd circle only the leader in green sits out.
+**Additional context.** Checking the stable outputs.
 
-> **Beyond the slides.** Checking the stable outputs.
->
-> - **Even *n*, colours (0, 1, 0, 1, …, 1):** *p*₀ (0) pairs with *p*ₙ₋₁, and *p*ₙ₋₁ (1) pairs with *p*ₙ mod ₙ = *p*₀: they agree. *p*₁ (1) pairs with *p*₂ and *p*₂ (0) pairs with *p*₁: they agree, and so on. Every processor is matched: *n*/2 pairs.
-> - **Odd *n*, colours (2, 1, 0, 1, 0, …, 0):** *p*₀ is single; *p*₁–*p*₂, *p*₃–*p*₄, …, *p*ₙ₋₂–*p*ₙ₋₁ are pairs. That is (*n* − 1)/2 pairs, the most possible, because in an odd ring one processor must stay single.
+- **Even *n*, colours (0, 1, 0, 1, …, 1):** *p*₀ (0) pairs with *p*ₙ₋₁, and *p*ₙ₋₁ (1) pairs with *p*ₙ mod ₙ = *p*₀: they agree. *p*₁ (1) pairs with *p*₂ and *p*₂ (0) pairs with *p*₁: they agree, and so on. Every processor is matched: *n*/2 pairs.
+- **Odd *n*, colours (2, 1, 0, 1, 0, …, 0):** *p*₀ is single; *p*₁–*p*₂, *p*₃–*p*₄, …, *p*ₙ₋₂–*p*ₙ₋₁ are pairs. That is (*n* − 1)/2 pairs, the most possible, because in an odd ring one processor must stay single.
 
 The session summarizes the proof idea: **by induction on *n*, *x*₀ ends up 0 when *n* is even and 2 otherwise**, and the rest follows from the definition of the function `output()`.
 
-### 4.3 Correctness with convergence stairs
+#### Correctness with convergence stairs
 
 **Theorem 2.1 (homework numbering).** Algorithm 4 is a self-stabilizing solution to the maximum matching problem that **stabilizes within O(*n*) asynchronous cycles**.
 
@@ -187,7 +180,7 @@ flowchart LR
 
 *Proof.* By line 5, *x*ₙ₋₁ can only hold 0 or 1. So, starting in any configuration and within one asynchronous cycle, the claim holds by line 3. □
 
-> **Honest note.** Line 5 guarantees *x*ₙ₋₁ ∈ {0, 1} only **after** *p*ₙ₋₁ has run once. A transient fault can leave *x*ₙ₋₁ = 2, and if *p*₀ reads it before *p*ₙ₋₁ runs, *p*₀ computes (2 + 2) mod 3 = 1. The worked execution in §3.3 shows exactly this: after cycle 1, *x*₀ = 1. So, strictly, Stair 1 is reached within **two** cycles, not one. This changes the count in Lemma 2.4 by one cycle (*n* + 2 instead of *n* + 1) and does **not** affect the O(*n*) result of Theorem 2.1.
+**Technical clarification.** Line 5 guarantees *x*ₙ₋₁ ∈ {0, 1} only **after** *p*ₙ₋₁ has run once. A transient fault can leave *x*ₙ₋₁ = 2, and if *p*₀ reads it before *p*ₙ₋₁ runs, *p*₀ computes (2 + 2) mod 3 = 1. The worked execution in §3.3 shows exactly this: after cycle 1, *x*₀ = 1. So, strictly, Stair 1 is reached within **two** cycles, not one. This changes the count in Lemma 2.4 by one cycle (*n* + 2 instead of *n* + 1) and does **not** affect the O(*n*) result of Theorem 2.1.
 
 **Claim 2.3.** Let altOneZero(*k*) = (1, 0, 1, 0, …) be the alternating sequence of length *k* starting with 1. For *k* ∈ {1, …, *n* − 1} let seqWithoutRoot(*k*) = (*x*₁, …, *xₖ*). Starting in *c*₁, within *n* − 1 asynchronous cycles the network reaches a configuration *c*ₙ in which seqWithoutRoot(*n* − 1) = altOneZero(*n* − 1).
 
@@ -202,11 +195,13 @@ flowchart LR
 
 *Proof.* Invariant (i) uses Invariant (i) of Claim 2.2, then Claim 2.3, then Invariant (ii) of Claim 2.2. Invariant (ii) follows from lines 8 to 10 together with two facts: when *n* is even, **every processor can have a match**; when *n* is odd, **exactly one processor (for example the root) must be single**. Thus Algorithm 4 is a self-stabilizing solution. □ (Lemma 2.4 and Theorem 2.1)
 
-## 5. Pre-lecture review questions: leader election
+## 3. Leader-election review
 
-The session reviewed these pre-lecture quiz questions. The answers below are the ones the course quiz accepts; guides 05 and 06 explain them in full.
+### 3.1 Pre-lecture review questions: leader election
 
-### 5.1 Leader election in general graphs
+The session reviewed these pre-lecture quiz questions. The answers below are the ones the course quiz accepts; guides 11 and 12 explain them in full.
+
+#### Leader election in general graphs
 
 | # | Question | Answer |
 |---|---|---|
@@ -216,7 +211,7 @@ The session reviewed these pre-lecture quiz questions. The answers below are the
 | 12 | What are floating identifiers? | Identifiers that appear in the system state but **belong to no real processor** (left by a transient fault). |
 | 13 | What does *pᵢ* store in the general-graph algorithm? | The identifier of its chosen leader **and the distance** to that leader. |
 | 14 | What is the distance variable for? | To **eliminate floating identifiers**. |
-| 15 | What happens when *pᵢ* reads a neighbour's identifier? | The quiz answer is "none of the other options". What *pᵢ* actually does: it starts from its own ⟨ID, 0⟩, adopts a neighbour's candidate if it is smaller (or equal with a shorter distance), sets its distance to that neighbour's distance + 1, and ignores every neighbour whose distance has already reached *N* (guide 05, §5). |
+| 15 | What happens when *pᵢ* reads a neighbour's identifier? | The quiz answer is "none of the other options". What *pᵢ* actually does: it starts from its own ⟨ID, 0⟩, adopts a neighbour's candidate if it is smaller (or equal with a shorter distance), sets its distance to that neighbour's distance + 1, and ignores every neighbour whose distance has already reached *N* (guide 11, §5). |
 | 16 | What is the first convergence stair? | A predicate saying **no floating identifiers exist**. |
 | 17 | What does the second stair ensure? | Every processor chooses the **minimal identifier of a real processor** as its leader. |
 | 19 | How does the minimal distance of a floating identifier grow? | Processors copy it from neighbours with a distance **one greater**. |
@@ -224,7 +219,7 @@ The session reviewed these pre-lecture quiz questions. The answers below are the
 | 21 | What does Lemma 2.5 state? | Every fair execution from any configuration has a **suffix with no floating identifier**. |
 | 22 | What does Theorem 2.3 conclude? | **Every fair execution reaches a safe configuration.** |
 
-### 5.2 Leader election in complete graphs
+#### Leader election in complete graphs
 
 | # | Question | Answer |
 |---|---|---|
@@ -234,8 +229,16 @@ The session reviewed these pre-lecture quiz questions. The answers below are the
 | 8 | What makes uniform algorithms more subtle than non-uniform ones? | The **absence of unique identifiers**. |
 | 10 | What is assumed in the complete-graph algorithm? | Each step is **a single read or a single write** operation. |
 
-## 6. Recap
+## 4. Summary
+
+### 4.1 Recap
 
 - **Ring coloring (Algorithm 3):** non-root processors alternate 0/1; the root picks 0 or 2 from the last processor's colour. Result: 2 colours for even *n*, 3 for odd *n*, which is optimal.
 - **Ring matching (Algorithm 4):** the same variables, read as "0 = matched backwards, 1 = matched forwards, 2 = single". Result: *n*/2 pairs for even *n*, (*n* − 1)/2 for odd *n*.
 - **Proof:** convergence stairs (root in {0, 2}; the rest alternates; root settles) give stabilization in O(*n*) asynchronous cycles.
+
+## Revision notes and references
+
+Technical clarifications, where the lecture material is corrected or made precise, appear in sections [2.2](#22-maximum-matching-on-the-ring-questions-2-and-3). Where the slides and the course book differ, this guide follows the book and says so at that point.
+
+- S. Dolev, *Self-Stabilization*, MIT Press, 2000: §2.6 (Dijkstra's ring) and §2.9 (convergence stairs), which the solutions build on.

@@ -2,17 +2,17 @@
 
 **Course:** EDA387/DIT663 Computer Networks, part 2 (Fault-tolerant Algorithms for Computer Networks), lecture "Self-stabilizing Leader Election", second part (Dolev, *Self-Stabilization*, §2.4 and §2.9: randomized self-stabilization and the scheduler-luck game). The first part of the same lecture, leader election in general ID-based graphs, has its own guide.
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. *This part of the lecture has no hidden slides, so nothing in this guide carries the † mark.*
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context from the course book (Dolev), from the course's own pre-lecture quiz, or a short check of reasoning that the lecture leaves implicit. **Everyday example** and **Kid example** retell an idea with an everyday picture. Everything else follows the lecture.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | Anonymous system | Uniform system | All processors are identical: same program, no identifiers. |
 | Atomic step | — | A step the scheduler cannot interrupt or look inside. |
@@ -34,36 +34,37 @@
 | SL-game | Scheduler-luck game | A proof technique for bounding the expected stabilization time of randomized algorithms. |
 | Symmetry breaking | — | Making identical processors end up in different roles (for example one leader and many followers). |
 
----
+## Contents
 
-## Table of contents
+- [1. Deterministic leader election without identifiers](#1-deterministic-leader-election-without-identifiers)
+  - [1.1 The question: leader election without identifiers](#11-the-question-leader-election-without-identifiers)
+  - [1.2 A deterministic solution under a central daemon](#12-a-deterministic-solution-under-a-central-daemon)
+  - [1.3 No deterministic solution under a distributed daemon](#13-no-deterministic-solution-under-a-distributed-daemon)
+- [2. Randomized self-stabilization](#2-randomized-self-stabilization)
+  - [2.1 Randomized self-stabilization](#21-randomized-self-stabilization)
+  - [2.2 Coarse versus fine atomicity](#22-coarse-versus-fine-atomicity)
+  - [2.3 The scheduler-luck game](#23-the-scheduler-luck-game)
+- [3. The randomized leader election algorithm](#3-the-randomized-leader-election-algorithm)
+  - [3.1 The randomized leader election algorithm](#31-the-randomized-leader-election-algorithm)
+  - [3.2 Lemma 2.6: stabilization within 2^O(n) expected rounds](#32-lemma-26-stabilization-within-2on-expected-rounds)
+  - [3.3 Lemma 2.7: no stabilization under fine atomicity](#33-lemma-27-no-stabilization-under-fine-atomicity)
+- [4. Summary](#4-summary)
+  - [4.1 Recap](#41-recap)
+- [Revision notes and references](#revision-notes-and-references)
 
-1. [The question: leader election without identifiers](#1-the-question-leader-election-without-identifiers)
-2. [A deterministic solution under a central daemon](#2-a-deterministic-solution-under-a-central-daemon)
-3. [No deterministic solution under a distributed daemon](#3-no-deterministic-solution-under-a-distributed-daemon)
-4. [Randomized self-stabilization](#4-randomized-self-stabilization)
-5. [Coarse versus fine atomicity](#5-coarse-versus-fine-atomicity)
-6. [The scheduler-luck game](#6-the-scheduler-luck-game)
-    - [6.1 Rules of the game](#61-rules-of-the-game)
-    - [6.2 Theorem 2.4: from a luck strategy to an expected time](#62-theorem-24-from-a-luck-strategy-to-an-expected-time)
-7. [The randomized leader election algorithm](#7-the-randomized-leader-election-algorithm)
-8. [Lemma 2.6: stabilization within 2^O(n) expected rounds](#8-lemma-26-stabilization-within-2on-expected-rounds)
-9. [Lemma 2.7: no stabilization under fine atomicity](#9-lemma-27-no-stabilization-under-fine-atomicity)
-10. [Recap](#10-recap)
+## 1. Deterministic leader election without identifiers
 
----
-
-## 1. The question: leader election without identifiers
+### 1.1 The question: leader election without identifiers
 
 The first part of the lecture elected the minimum identifier in an ID-based network. Now the question is:
 
-> **Is there a deterministic solution without identifiers in fully connected graphs?**
+**Is there a deterministic solution without identifiers in fully connected graphs?**
 
 A leader election algorithm must end in a configuration where **exactly one** processor is the leader and every processor knows whether it is the leader or not. That final configuration is **not symmetric**. In an ID-based system, the identifiers already make processors different. In an **anonymous (uniform)** system all processors are identical, so something must **break the symmetry**. The answer depends on the scheduler.
 
-> **Beyond the slides (Dolev §2.9):** in an ID-based complete graph the problem is trivial: every processor repeatedly appoints the processor with the maximal identifier. The difficulty here comes purely from having no identifiers.
+**Additional context (Dolev §2.9).** in an ID-based complete graph the problem is trivial: every processor repeatedly appoints the processor with the maximal identifier. The difficulty here comes purely from having no identifiers.
 
-## 2. A deterministic solution under a central daemon
+### 1.2 A deterministic solution under a central daemon
 
 Under the **central daemon** model, **exactly one** processor among all processors is selected, arbitrarily, by an adversarial scheduler, to take a single atomic step.
 
@@ -85,7 +86,7 @@ A possible run with five people (S = standing, s = sitting), in the spirit of th
 
 From the third pick on, exactly one person (person 5) is standing, and it stays that way.
 
-## 3. No deterministic solution under a distributed daemon
+### 1.3 No deterministic solution under a distributed daemon
 
 Under the **distributed daemon** model, an arbitrary number of processors are selected by an adversarial scheduler to **concurrently** take atomic steps. Now the same rule fails:
 
@@ -103,9 +104,11 @@ stateDiagram-v2
 
 Since all processors are identical, start in the same state and see the same thing, any deterministic rule makes them all do the same thing. The scheduler can keep them perfectly in step forever. **Unfortunately, there is no deterministic solution under a distributed daemon.** That is why we turn to randomization.
 
-> **Beyond the slides (Dolev §2.9):** the book concludes that there is no self-stabilizing uniform leader election algorithm without a central daemon (meaning a deterministic one); the randomized algorithm below needs no central daemon.
+**Additional context (Dolev §2.9).** the book concludes that there is no self-stabilizing uniform leader election algorithm without a central daemon (meaning a deterministic one); the randomized algorithm below needs no central daemon.
 
-## 4. Randomized self-stabilization
+## 2. Randomized self-stabilization
+
+### 2.1 Randomized self-stabilization
 
 **Assumptions and definitions:**
 
@@ -114,20 +117,16 @@ Since all processors are identical, start in the same state and see the same thi
 - The scheduler is regarded as an **adversary**: it aims to increase the algorithm's costs as much as possible.
 - The scheduler is assumed to be **fair**, yet it has **unlimited resources** and chooses the next activated processor **online** (step by step, based on what has happened so far).
 
-> **An algorithm is randomized self-stabilizing for task LE if, starting with any system configuration and considering any fair scheduler, the algorithm reaches a safe configuration within a finite number of rounds** (in expectation; see the SL-game below).
+**An algorithm is randomized self-stabilizing for task LE if, starting with any system configuration and considering any fair scheduler, the algorithm reaches a safe configuration within a finite number of rounds** (in expectation; see the SL-game below).
 
 **Randomized algorithms are often used to break symmetry** in a network of totally identical processors: if each processor flips its own coin, they will sooner or later get different results.
 
-*Everyday example:* five identical twins who must pick one of them to answer the phone. If they all follow the same rule, they all pick up or nobody does. If each flips a coin, sooner or later exactly one gets heads.
-
-## 5. Coarse versus fine atomicity
+### 2.2 Coarse versus fine atomicity
 
 When a processor tosses a coin, can the adversary see the result before the processor acts on it? This depends on the **atomicity** assumed:
 
 - **Coarse atomicity, less power to the adversary.** A coin toss is an internal operation that is **not separable from the next read or write**. The adversary is **unaware** of the algorithm's random choice before that read or write has happened.
 - **Fine atomicity, more power to the adversary.** A coin toss is a **separate operation** from the next read or write. The adversary **is aware** of the random choice before the read or write, and can schedule other processors in between.
-
-> **Kid example.** Coarse atomicity is like tossing a coin under a cup and acting on it in the same instant: the troublemaker (the scheduler) cannot peek. Fine atomicity is like tossing the coin openly on the table and only acting a moment later: the troublemaker sees the result first and can let other players move in a way that spoils your plan.
 
 ```mermaid
 flowchart LR
@@ -143,11 +142,11 @@ flowchart LR
 
 We will see that the leader election algorithm below **works under coarse atomicity** (Lemma 2.6) and **fails under fine atomicity** (Lemma 2.7).
 
-## 6. The scheduler-luck game
+### 2.3 The scheduler-luck game
 
 **Purpose:** to prove **upper bounds on the stabilization time of randomized algorithms** via probability calculations. Analysing every possible outcome of every random choice is very complicated, especially for self-stabilizing algorithms that make no assumption about the initial state. The **SL-game** avoids this: it **fixes** the outcome of the random function, so the proof looks like a proof of a deterministic algorithm.
 
-### 6.1 Rules of the game
+#### Rules of the game
 
 Given a randomized algorithm *AL*, we define a game between two players, **scheduler** and **luck**:
 
@@ -187,9 +186,9 @@ cp = \prod_{x=1}^{\ell} \Pr(x).
 - ***r*** is the expected number of rounds until stabilization, assuming every intervention succeeds.
 - Luck has a **(*cp*, *r*)-strategy** to win the game if it has a strategy to reach a safe configuration in an expected number of at most *r* rounds, with interventions whose combined probability is no more than *cp*.
 
-### 6.2 Theorem 2.4: from a luck strategy to an expected time
+#### Theorem 2.4: from a luck strategy to an expected time
 
-> **Theorem 2.4.** If luck has a (*cp*, *r*)-strategy, then the algorithm reaches a safe configuration within at most ***r*/*cp*** expected number of rounds.
+**Theorem 2.4.** If luck has a (*cp*, *r*)-strategy, then the algorithm reaches a safe configuration within at most ***r*/*cp*** expected number of rounds.
 
 *Proof sketch.*
 
@@ -204,11 +203,11 @@ cp = \prod_{x=1}^{\ell} \Pr(x).
 
 5. Each try takes *r* expected rounds. Since the expectation of a sum is the sum of the expectations, the expected number of rounds until a safe configuration is ***r*/*cp***. ∎
 
-*Everyday example:* to win a game you need a lucky streak that happens with probability *cp* = 1/8 and takes *r* = 10 minutes to play out. On average you need 8 attempts, so on average 80 minutes. That is *r*/*cp*.
+**Additional context (checking the sum).** the formula Σ *x*(1 − *q*)ˣ⁻¹*q* = 1/*q* is the mean of a geometric distribution. Quick check with *q* = 1/2: 1·½ + 2·¼ + 3·⅛ + 4·1/16 + … = 2 = 1/*q*.
 
-> **Beyond the slides (checking the sum):** the formula Σ *x*(1 − *q*)ˣ⁻¹*q* = 1/*q* is the mean of a geometric distribution. Quick check with *q* = 1/2: 1·½ + 2·¼ + 3·⅛ + 4·1/16 + … = 2 = 1/*q*.
+## 3. The randomized leader election algorithm
 
-## 7. The randomized leader election algorithm
+### 3.1 The randomized leader election algorithm
 
 The studied algorithm uses the **shared-memory model** for networks with the topology of a **complete graph** (every processor can read every other processor's register). Each processor *pᵢ* has a one-bit **leader register** leaderᵢ that it writes and everyone reads. The coin returns 0 or 1 with equal probability.
 
@@ -252,11 +251,11 @@ flowchart TD
 
 In any fair execution that starts in a safe configuration, *pᵢ* is the single leader, so the execution is in LE. (How can you prove it? Check that no processor's condition in lines 04–05 can ever become true: *pᵢ* only ever reads 0 from the others, and every other processor is 0 and only ever reads 1 from *pᵢ*, so nobody tosses a coin and nobody writes.)
 
-> **Beyond the slides (Dolev §2.9):** the book's definition of a safe configuration has only the first two conditions; the lecture adds the third (no stale 1 in any local copy), which makes the "nobody ever writes again" argument immediate.
+**Additional context (Dolev §2.9).** the book's definition of a safe configuration has only the first two conditions; the lecture adds the third (no stale 1 in any local copy), which makes the "nobody ever writes again" argument immediate.
 
-## 8. Lemma 2.6: stabilization within 2^O(n) expected rounds
+### 3.2 Lemma 2.6: stabilization within 2^O(n) expected rounds
 
-> **Lemma 2.6.** The algorithm stabilizes within 2^O(*n*) expected number of rounds. More precisely, using Theorem 2.4 the expected number of rounds is at most **2*n* · 2ⁿ**.
+**Lemma 2.6.** The algorithm stabilizes within 2^O(*n*) expected number of rounds. More precisely, using Theorem 2.4 the expected number of rounds is at most **2*n* · 2ⁿ**.
 
 The proof presents a **(1/2ⁿ, 2*n*)-strategy** for luck. Then by Theorem 2.4 the expected number of rounds is at most *r*/*cp* = 2*n* / (1/2ⁿ) = 2*n* · 2ⁿ.
 
@@ -302,11 +301,11 @@ flowchart LR
     A -. "real coins disagree with luck:<br/>start a new try" .-> A
 ```
 
-> **Note on the source.** One sentence of the lecture says "Luck wins the game within 2ⁿ rounds"; the rest of the lecture, the rest of the proof and the book all say **2*n*** rounds, which is what the bound 2*n*·2ⁿ uses.
+**Technical clarification.** One sentence of the lecture says "Luck wins the game within 2ⁿ rounds"; the rest of the lecture, the rest of the proof and the book all say **2*n*** rounds, which is what the bound 2*n*·2ⁿ uses.
 
-## 9. Lemma 2.7: no stabilization under fine atomicity
+### 3.3 Lemma 2.7: no stabilization under fine atomicity
 
-> **Lemma 2.7.** The algorithm is **not** self-stabilizing under fine atomicity (where a coin toss is a separate atomic step).
+**Lemma 2.7.** The algorithm is **not** self-stabilizing under fine atomicity (where a coin toss is a separate atomic step).
 
 *Proof: a winning strategy for the scheduler.*
 
@@ -331,14 +330,22 @@ stateDiagram-v2
 
 The system never has exactly one leader, so it never stabilizes. The lecture animates this with five people: one by one each tosses until the coin shows 0 (=0 above each head) while still standing, and then all of them sit down together.
 
-> **Beyond the slides (Dolev §2.9):** the book adds that the resulting schedule is fair with probability 1 (every processor keeps being activated), so this is a legitimate fair scheduler, not a cheat.
+**Additional context (Dolev §2.9).** the book adds that the resulting schedule is fair with probability 1 (every processor keeps being activated), so this is a legitimate fair scheduler, not a cheat.
 
 The lesson: **the exact atomicity assumption decides whether a randomized algorithm works.** Under coarse atomicity the scheduler cannot react to the coin before it is written, so it cannot keep everyone in step.
 
-## 10. Recap
+## 4. Summary
+
+### 4.1 Recap
 
 - In **anonymous** complete graphs, leader election needs **symmetry breaking**. A **deterministic** rule ("stand if nobody stands, else sit") works under a **central daemon** but **no deterministic solution exists under a distributed daemon**.
 - **Randomized self-stabilization:** from any configuration, under any fair scheduler, a safe configuration is reached within a finite (expected) number of rounds.
 - **Coarse atomicity** (toss and write in one step) gives the adversary less power than **fine atomicity** (toss as a separate step).
 - **SL-game:** scheduler versus luck. If luck has a **(*cp*, *r*)-strategy**, the algorithm stabilizes within **r/cp** expected rounds (**Theorem 2.4**), because the number of tries is geometric with mean 1/*cp*.
 - **Algorithm:** toss a coin if you are 0 and see no leader, or you are 1 and see another leader. Under coarse atomicity luck has a **(1/2ⁿ, 2*n*)-strategy**, giving at most **2*n*·2ⁿ ∈ 2^O(*n*)** expected rounds (**Lemma 2.6**). Under fine atomicity the scheduler can prevent stabilization forever (**Lemma 2.7**).
+
+## Revision notes and references
+
+Technical clarifications, where the lecture material is corrected or made precise, appear in sections [3.2](#32-lemma-26-stabilization-within-2on-expected-rounds). Where the slides and the course book differ, this guide follows the book and says so at that point.
+
+- S. Dolev, *Self-Stabilization*, MIT Press, 2000: §2.4 and §2.9 (randomized self-stabilization and the scheduler-luck game).

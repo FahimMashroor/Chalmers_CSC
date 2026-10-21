@@ -2,17 +2,17 @@
 
 **Course:** EDA387/DIT663 Computer Networks, part 2 (Fault-tolerant Algorithms for Computer Networks), lecture "Convergence in the Presence of Faults (Ch. 6)". The lecture opens with a review of the Network Time Protocol (NTP), whose prelude slides "are based on the ones by Judah Levine" (NIST, Boulder), and then follows Dolev, *Self-Stabilization*, §6.1 "Digital Clock Synchronization" and §6.2 "Stabilization in Spite of Napping".
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
-**† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. In this lecture the hidden material is the second half of the NTP review: leap seconds, stratum, authentication, the two-way delay measurement, measurement modes and typical performance (sections 4 to 6). The lecture also says that the details of the constant-states lower-bound proof were skipped this year (section 12).
+**† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. In this lecture the hidden material is the second half of the NTP review: leap seconds, stratum, authentication, the two-way delay measurement, measurement modes and typical performance (sections 1.4 to 1.6). The lecture also says that the details of the constant-states lower-bound proof were skipped this year (section 2.6).
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context from the course book (Dolev), from old exams, from the course's pre-lecture quiz on this chapter (quiz 14), or general knowledge, marked as such. **Note on the source** marks a place where the lecture material is wrong, garbled or incomplete. **Kid example** retells an idea with an everyday picture.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | Adjustment | — | A processor "adjusts" its clock in a step if it does **not** simply add 1. The requirement "no adjustment" means: just tick by one. |
 | Agreement | — | All (working) processors show the same clock value. |
@@ -44,34 +44,37 @@
 | UTC | Coordinated Universal Time | The world's reference time scale; it replaced Greenwich Mean Time (GMT). |
 | Wait-free | — | A working processor makes progress no matter what the others do, even if all n − 1 others are faulty. |
 
----
+## Contents
 
-## Table of contents
+- [1. The Network Time Protocol (NTP)](#1-the-network-time-protocol-ntp)
+  - [1.1 What this lecture is about](#11-what-this-lecture-is-about)
+  - [1.2 NTP: message format and transport](#12-ntp-message-format-and-transport)
+  - [1.3 NTP: the time datum](#13-ntp-the-time-datum)
+  - [1.4 † NTP: other parameters, authentication](#14--ntp-other-parameters-authentication)
+  - [1.5 † NTP: the two-way protocol and its error](#15--ntp-the-two-way-protocol-and-its-error)
+  - [1.6 † NTP: measurement modes and performance](#16--ntp-measurement-modes-and-performance)
+- [2. Digital clock synchronization (Dolev §6.1)](#2-digital-clock-synchronization-dolev-61)
+  - [2.1 Digital clock synchronization: the problem](#21-digital-clock-synchronization-the-problem)
+  - [2.2 The unbounded algorithm (max + 1)](#22-the-unbounded-algorithm-max--1)
+  - [2.3 Why unbounded clocks are a problem](#23-why-unbounded-clocks-are-a-problem)
+  - [2.4 Bounded version I: max, modulo (n + 1)d + 1](#24-bounded-version-i-max-modulo-n--1d--1)
+  - [2.5 Bounded version II: min, modulo 2d + 1](#25-bounded-version-ii-min-modulo-2d--1)
+  - [2.6 A constant number of states is impossible](#26-a-constant-number-of-states-is-impossible)
+- [3. Stabilization in spite of napping (Dolev §6.2)](#3-stabilization-in-spite-of-napping-dolev-62)
+  - [3.1 Napping faults: wait-free self-stabilization](#31-napping-faults-wait-free-self-stabilization)
+  - [3.2 The unbounded algorithm with k = 1](#32-the-unbounded-algorithm-with-k--1)
+  - [3.3 The bounded algorithm: rock, paper, scissors](#33-the-bounded-algorithm-rock-paper-scissors)
+  - [3.4 Theorem 6.1: the algorithm works with k = 2](#34-theorem-61-the-algorithm-works-with-k--2)
+- [4. Summary and review](#4-summary-and-review)
+  - [4.1 Summary and review questions](#41-summary-and-review-questions)
+  - [4.2 Recap](#42-recap)
+  - [4.3 Old exam questions on this lecture](#43-old-exam-questions-on-this-lecture)
+  - [4.4 Related quiz topics not on the slides](#44-related-quiz-topics-not-on-the-slides)
+- [Revision notes and references](#revision-notes-and-references)
 
-1. [What this lecture is about](#1-what-this-lecture-is-about)
-2. [NTP: message format and transport](#2-ntp-message-format-and-transport)
-3. [NTP: the time datum](#3-ntp-the-time-datum)
-4. [† NTP: other parameters, authentication](#4--ntp-other-parameters-authentication)
-5. [† NTP: the two-way protocol and its error](#5--ntp-the-two-way-protocol-and-its-error)
-6. [† NTP: measurement modes and performance](#6--ntp-measurement-modes-and-performance)
-7. [Digital clock synchronization: the problem](#7-digital-clock-synchronization-the-problem)
-8. [The unbounded algorithm (max + 1)](#8-the-unbounded-algorithm-max--1)
-9. [Why unbounded clocks are a problem](#9-why-unbounded-clocks-are-a-problem)
-10. [Bounded version I: max, modulo (n + 1)d + 1](#10-bounded-version-i-max-modulo-n--1d--1)
-11. [Bounded version II: min, modulo 2d + 1](#11-bounded-version-ii-min-modulo-2d--1)
-12. [A constant number of states is impossible](#12-a-constant-number-of-states-is-impossible)
-13. [Napping faults: wait-free self-stabilization](#13-napping-faults-wait-free-self-stabilization)
-14. [The unbounded algorithm with k = 1](#14-the-unbounded-algorithm-with-k--1)
-15. [The bounded algorithm: rock, paper, scissors](#15-the-bounded-algorithm-rock-paper-scissors)
-16. [Theorem 6.1: the algorithm works with k = 2](#16-theorem-61-the-algorithm-works-with-k--2)
-17. [Summary and review questions](#17-summary-and-review-questions)
-18. [Recap](#18-recap)
-19. [Old exam questions on this lecture](#19-old-exam-questions-on-this-lecture)
-20. [Related quiz topics not on the slides](#20-related-quiz-topics-not-on-the-slides)
+## 1. The Network Time Protocol (NTP)
 
----
-
-## 1. What this lecture is about
+### 1.1 What this lecture is about
 
 The plan of the lecture:
 
@@ -86,11 +89,7 @@ The chapter roadmap:
 - **6.1 Digital Clock Synchronization**
 - **6.2 Stabilization in Spite of Napping**
 
-> **Kid example.** Before, the game was "someone messes up the board once, then the kids fix it". Now some kids also fall asleep and wake up again in the middle of the game, and the others must keep playing correctly anyway.
-
----
-
-## 2. NTP: message format and transport
+### 1.2 NTP: message format and transport
 
 **Message format and parameters.**
 
@@ -110,13 +109,11 @@ This is fine for time: NTP does not need every packet. It relies on **repeated e
 - **Independent of the physical layer in principle**, but **performance depends on the physical layer in practice** (speed, delay and loss of the network affect accuracy).
 - **All versions of NTP can use IPv4; newer versions also support IPv6.**
 
-> **Note on the source.** The lecture's explanation says "NTP employs a checksum mechanism ... calculated over the entire NTP packet". The checksum belongs to **UDP** (and IP), not to NTP itself; the lecture's own list correctly puts it under "Packets are UDP/IP". NTP's own integrity check is the optional authenticator.
+**Technical clarification.** The lecture's explanation says "NTP employs a checksum mechanism ... calculated over the entire NTP packet". The checksum belongs to **UDP** (and IP), not to NTP itself; the lecture's own list correctly puts it under "Packets are UDP/IP". NTP's own integrity check is the optional authenticator.
 
-> **Beyond the slides.** RFC 1305 is NTP version 3 (1992). The current version, NTPv4, is defined in RFC 5905 (2010). NTP uses UDP port 123 (section 6 † says so too).
+**Additional context.** RFC 1305 is NTP version 3 (1992). The current version, NTPv4, is defined in RFC 5905 (2010). NTP uses UDP port 123 (section 1.6 † says so too).
 
----
-
-## 3. NTP: the time datum
+### 1.3 NTP: the time datum
 
 **The NTP time datum:**
 
@@ -136,13 +133,9 @@ This is fine for time: NTP does not need every packet. It relies on **repeated e
 
 **What can go wrong:** after the **2036 rollover**, software that does not handle it would think it is 1900 again (wrong time order, expired certificates, broken logs). A time of **0.0** would mean "exactly 1 January 1900", which is never a real timestamp, so it is used as "no valid time".
 
-> **Kid example.** A car's odometer with only six digits. After 999,999 km it shows 000,000 again. The NTP seconds counter has the same problem in 2036.
+**Additional context (arithmetic check).** 2³² s = 4,294,967,296 s ≈ 136.1 years, and 1900 + 136.1 ≈ 2036 (the exact date is 7 February 2036). 2⁻³² s ≈ 0.233 ns = 233 ps. One cycle at 3.0 GHz = 1/3,000,000,000 s ≈ 333 ps.
 
-> **Beyond the slides (arithmetic check).** 2³² s = 4,294,967,296 s ≈ 136.1 years, and 1900 + 136.1 ≈ 2036 (the exact date is 7 February 2036). 2⁻³² s ≈ 0.233 ns = 233 ps. One cycle at 3.0 GHz = 1/3,000,000,000 s ≈ 333 ps.
-
----
-
-## 4. † NTP: other parameters, authentication
+### 1.4 † NTP: other parameters, authentication
 
 **Some other parameters.**
 
@@ -172,11 +165,9 @@ This is fine for time: NTP does not need every packet. It relies on **repeated e
 - It does **not** affect accuracy or traceability.
 - A "man in the middle" can still **delay** a valid message or **replay** an old one.
 
-> **Beyond the slides.** Leap seconds are inserted as an extra second, 23:59:60, usually at the end of 30 June or 31 December. MD5 is no longer considered collision-resistant, so modern NTP deployments prefer stronger hashes or Network Time Security (NTS, RFC 8915). Delay attacks matter because NTP's accuracy depends on measuring the delay (section 5).
+**Additional context.** Leap seconds are inserted as an extra second, 23:59:60, usually at the end of 30 June or 31 December. MD5 is no longer considered collision-resistant, so modern NTP deployments prefer stronger hashes or Network Time Security (NTS, RFC 8915). Delay attacks matter because NTP's accuracy depends on measuring the delay (section 1.5).
 
----
-
-## 5. † NTP: the two-way protocol and its error
+### 1.5 † NTP: the two-way protocol and its error
 
 The client sends a request at **t1** (client clock). The server receives it at **t2** and answers at **t3** (server clock). The client receives the answer at **t4** (client clock). The one-way delay is **d**.
 
@@ -200,15 +191,11 @@ The formulas:
 - So **MaxError = ±0.5Δ** (k = 1 gives +Δ/2, k = 0 gives −Δ/2).
 - The error is at most half the round trip, so **"Smaller delay has smaller asymmetry error."**
 
-> **Note on the source.** With the usual meaning (positive when the server is ahead), the server-minus-client offset is t2 − (t1 + d); the lecture's expression is the client-minus-server difference. Only the sign differs, so the size of the error, ±Δ/2, is unchanged.
+**Technical clarification.** With the usual meaning (positive when the server is ahead), the server-minus-client offset is t2 − (t1 + d); the lecture's expression is the client-minus-server difference. Only the sign differs, so the size of the error, ±Δ/2, is unchanged.
 
-> **Beyond the slides (worked example).** t1 = 100.000 s, t2 = 100.060, t3 = 100.061, t4 = 100.041 (client clock). Δ = (100.041 − 100.000) − (100.061 − 100.060) = 0.041 − 0.001 = 0.040 s. Estimated one-way delay Δ/2 = 0.020 s. Server ahead by t2 − (t1 + 0.020) = 100.060 − 100.020 = **0.040 s**. The same as the standard NTP formula ((t2 − t1) + (t3 − t4)) / 2 = (0.060 + 0.020) / 2 = 0.040 s. Whatever the real split of the delay, the error is at most ±0.020 s.
+**Additional context (worked example).** t1 = 100.000 s, t2 = 100.060, t3 = 100.061, t4 = 100.041 (client clock). Δ = (100.041 − 100.000) − (100.061 − 100.060) = 0.041 − 0.001 = 0.040 s. Estimated one-way delay Δ/2 = 0.020 s. Server ahead by t2 − (t1 + 0.020) = 100.060 − 100.020 = **0.040 s**. The same as the standard NTP formula ((t2 − t1) + (t3 − t4)) / 2 = (0.060 + 0.020) / 2 = 0.040 s. Whatever the real split of the delay, the error is at most ±0.020 s.
 
-> **Kid example.** You shout to a friend across a field and they shout back. You know how long the whole echo took, but not whether the wind made one direction slower. Guessing "half each way" can be wrong by at most half the echo time.
-
----
-
-## 6. † NTP: measurement modes and performance
+### 1.6 † NTP: measurement modes and performance
 
 **Measurement protocols.**
 
@@ -227,13 +214,13 @@ The formulas:
 - Long distance and/or slow or busy link: 100 ms – 1 s.
 - **Accuracy is set by the accuracy of the network delay measurement**, not by the message format. **PTP/1588 is not better on the same network.** Accuracy degrades on networks with **asymmetric** delays (for example web servers).
 
-> **Note on the source.** The two "small LAN" numbers in the lecture cannot be right as written: a small LAN cannot be worse (220 ms) than a large building LAN (2 ms) or an Internet path (10–20 ms). They were very probably **microseconds** (10 µs and 220 µs) in the original source, and the unit was changed by mistake.
+**Technical clarification.** The two "small LAN" numbers in the lecture cannot be right as written: a small LAN cannot be worse (220 ms) than a large building LAN (2 ms) or an Internet path (10–20 ms). They were very probably **microseconds** (10 µs and 220 µs) in the original source, and the unit was changed by mistake.
 
-> **Beyond the slides.** PTP (IEEE 1588) usually reaches much better accuracy than NTP in practice, but only because it uses hardware timestamps and PTP-aware switches that remove the delay uncertainty. That fits the lecture's point: what limits you is how well you can measure the network delay.
+**Additional context.** PTP (IEEE 1588) usually reaches much better accuracy than NTP in practice, but only because it uses hardware timestamps and PTP-aware switches that remove the delay uncertainty. That fits the lecture's point: what limits you is how well you can measure the network delay.
 
----
+## 2. Digital clock synchronization (Dolev §6.1)
 
-## 7. Digital clock synchronization: the problem
+### 2.1 Digital clock synchronization: the problem
 
 **Motivation.** Multi-processor computers need synchronization for coordination, that is, clocks. Possible setups:
 
@@ -251,13 +238,9 @@ Such systems can be resilient to faults, but the number of faults grows with the
 
 There are n **identical** processors, all connected to a **global common clock pulse**, each keeping a digital clock value.
 
-> **Beyond the slides.** Identical processors are no obstacle here, because the goal (everybody equal) is itself symmetric. That is unlike leader election, where symmetry must be broken (Dolev §6.1).
+**Additional context.** Identical processors are no obstacle here, because the goal (everybody equal) is itself symmetric. That is unlike leader election, where symmetry must be broken (Dolev §6.1).
 
-> **Kid example.** Every kid in class has a watch. On each drum beat, everyone looks at their neighbours' watches, decides on the new time and sets their own. Goal: all watches show the same time and tick together.
-
----
-
-## 8. The unbounded algorithm (max + 1)
+### 2.2 The unbounded algorithm (max + 1)
 ```text
 01 upon a pulse
 02   forall Pj ∈ N(i) do send(j, clock_i)
@@ -280,19 +263,11 @@ flowchart LR
     C --> D["pulse d<br/>everyone has it"]
 ```
 
-> **Kid example.** The biggest number spreads like a rumour, one hop per drum beat. After d beats everybody has heard it.
-
----
-
-## 9. Why unbounded clocks are a problem
+### 2.3 Why unbounded clocks are a problem
 
 **"Unbounded clocks is a drawback in self-stabilizing systems."** Using 2⁶⁴ possible values does **not** create the illusion of "unbounded": **a single transient fault may cause the clock to reach the maximal clock value.** Then the next "+1" overflows, and "take the maximum" no longer works.
 
-> **Kid example.** A prankster can turn your six-digit odometer to 999,999 in one second. "It takes forever to get there" does not help against a prankster.
-
----
-
-## 10. Bounded version I: max, modulo (n + 1)d + 1
+### 2.4 Bounded version I: max, modulo (n + 1)d + 1
 
 The same algorithm, only line 8 changes:
 
@@ -330,11 +305,9 @@ flowchart TB
     A --> D["synchronized: all equal, +1 mod M each pulse"]
 ```
 
-> **Beyond the slides.** Once synchronized, all clocks show M − 1 at the same pulse and become 0 together at the next pulse (Dolev, quiz 14 Q10), so the wrap-around does not break agreement.
+**Additional context.** Once synchronized, all clocks show M − 1 at the same pulse and become 0 together at the next pulse (Dolev, quiz 14 Q10), so the wrap-around does not break agreement.
 
----
-
-## 11. Bounded version II: min, modulo 2d + 1
+### 2.5 Bounded version II: min, modulo 2d + 1
 
 Use the **minimum** instead of the maximum:
 
@@ -360,11 +333,7 @@ Example (our own run, line p1 – p2 – p3, d = 2, M = 5):
 | 2 | 1 | 1 | 3 | the 0 spreads to p2 |
 | 3 | 2 | 2 | 2 | all equal |
 
-> **Kid example.** Instead of "follow the fastest watch", everybody follows the **slowest** one they can see. A small dial is enough because the slowest value cannot run away.
-
----
-
-## 12. A constant number of states is impossible
+### 2.6 A constant number of states is impossible
 
 **"There is no uniform digital clock-synchronization algorithm that uses only a constant number of states per processor"** (for deterministic algorithms). The question is: can the number of clock values be a fixed constant, related to neither the diameter nor the number of processors? No. The proof uses rings: a lower bound for this special case is a lower bound for general graphs.
 
@@ -395,13 +364,11 @@ Two natural follow-up questions, which Dolev answers:
 - **"Do we have to assume that the ring is unidirectional?"** No. For bidirectional rings, f depends on three states, so a repeat appears within O(|S|³) states, and the same rotation argument works.
 - **"Does a probabilistic algorithm exist for this ring?"** Yes. At each pulse, each processor randomly picks **its own clock or a neighbour's** and sets clock := (that + 1) mod M. The number of distinct values can only shrink, and it stabilizes **with probability 1** (if every processor happened to pick the neighbour on a shortest path to one fixed processor, all would agree within d pulses).
 
-> **Note on the source.** The lecture once says "In a undirected ring"; it should be "unidirected" (one-way) ring, as the lecture says elsewhere and as in Dolev.
+**Technical clarification.** The lecture once says "In a undirected ring"; it should be "unidirected" (one-way) ring, as the lecture says elsewhere and as in Dolev.
 
-> **Kid example.** Kids in a circle each copy a rule that looks only at the kid on their left. With few possible "faces", you can seat the kids so that every beat the faces just pass one seat along the circle, like a merry-go-round. The pattern never settles, so the clocks never agree.
+## 3. Stabilization in spite of napping (Dolev §6.2)
 
----
-
-## 13. Napping faults: wait-free self-stabilization
+### 3.1 Napping faults: wait-free self-stabilization
 
 **Stabilizing in spite of napping:**
 
@@ -411,15 +378,14 @@ Two natural follow-up questions, which Dolev answers:
   - **Adjustment:** pi does not adjust its clock (it just adds 1);
   - **Agreement:** pi's clock agrees with every other processor that has also worked correctly for at least k time units.
 
-> **Beyond the slides.** Dolev §6.2 (and quiz 14):
-> - **Napping is worse than crashing**: a crashed processor is a napping one that never wakes, but a napping one can come back at any moment with an old value.
-> - **"Wait-free"**: a working processor synchronizes even if **all n − 1 others are faulty**; it never waits for anyone.
-> - Each requirement alone is trivial: "add 1 every pulse without talking to anyone" gives adjustment but not agreement; "always show 0" gives agreement but not adjustment. The challenge is both together.
-> - The setting is a **complete graph**: every processor can read every other processor.
+**Additional context.** Dolev §6.2 (and quiz 14):
 
----
+- **Napping is worse than crashing**: a crashed processor is a napping one that never wakes, but a napping one can come back at any moment with an old value.
+- **"Wait-free"**: a working processor synchronizes even if **all n − 1 others are faulty**; it never waits for anyone.
+- Each requirement alone is trivial: "add 1 every pulse without talking to anyone" gives adjustment but not agreement; "always show 0" gives agreement but not adjustment. The challenge is both together.
+- The setting is a **complete graph**: every processor can read every other processor.
 
-## 14. The unbounded algorithm with k = 1
+### 3.2 The unbounded algorithm with k = 1
 
 A simple example with **k = 1**, using unbounded clocks:
 
@@ -441,11 +407,7 @@ sequenceDiagram
     Note over A: clock := 0 again, an adjustment every pulse
 ```
 
-> **Kid example.** A sleeping kid holds a sign "59 minutes". If everybody always copies the biggest sign and adds one minute, they keep jumping back to "0", forever. You need a way to ignore the sleeper.
-
----
-
-## 15. The bounded algorithm: rock, paper, scissors
+### 3.3 The bounded algorithm: rock, paper, scissors
 
 **The idea:** **identify the crashed (napping) processors and ignore their values.** Each processor P has:
 
@@ -500,13 +462,9 @@ stateDiagram-v2
 
 **Run sample.** Four processors P1 to P4 in a complete graph with k = 2; the figure marks the active processors, the "behind" connections and which processors are in NB, and shows their clocks converging.
 
-> **Note on the source.** The variable names change during the lecture: **count** in the first version of the code, **order** (order_ij) in the proof and in Dolev, **R** for the set NB in an older hidden version of the code, and **A** in quiz 14. They all mean the same things. One line of the code ends with a stray word "processors", and its "if NB ∅" has lost the "≠" sign.
+**Technical clarification.** The variable names change during the lecture: **count** in the first version of the code, **order** (order_ij) in the proof and in Dolev, **R** for the set NB in an older hidden version of the code, and **A** in quiz 14. They all mean the same things. One line of the code ends with a stray word "processors", and its "if NB ∅" has lost the "≠" sign.
 
-> **Kid example.** Every pair of kids shares a little arrow. Each time you act, you turn the arrow towards yourself. If both of you act, the arrow points nowhere. If your friend falls asleep, the arrow ends up pointing at you, and everyone knows to ignore the sleeper's watch.
-
----
-
-## 16. Theorem 6.1: the algorithm works with k = 2
+### 3.4 Theorem 6.1: the algorithm works with k = 2
 
 **Theorem 6.1:** the algorithm is a **wait-free self-stabilizing clock-synchronization algorithm with k = 2**.
 
@@ -525,13 +483,13 @@ stateDiagram-v2
 | 2nd step | all processors in NB (and everyone who steps) have the same clock |
 | later steps | agreement and adjustment hold, so k = 2 |
 
-> **Note on the source.** The lecture (like Dolev) writes "the maximal clock value m of a processor in NB" and "increments m by 1 modulo M"; Dolev's printed text even uses the same letter M for both the value and the modulus. They are two different things: m is a clock value, M is the bound.
+**Technical clarification.** The lecture (like Dolev) writes "the maximal clock value m of a processor in NB" and "increments m by 1 modulo M"; Dolev's printed text even uses the same letter M for both the value and the modulus. They are two different things: m is a clock value, M is the bound.
 
-> **Beyond the slides.** Compared with the unbounded k = 1 algorithm, this one needs one more step (k = 2) but uses only bounded memory (clocks mod M and counters mod 3). That is its main point (quiz 14 Q44, Q49).
+**Additional context.** Compared with the unbounded k = 1 algorithm, this one needs one more step (k = 2) but uses only bounded memory (clocks mod M and counters mod 3). That is its main point (quiz 14 Q44, Q49).
 
----
+## 4. Summary and review
 
-## 17. Summary and review questions
+### 4.1 Summary and review questions
 
 **Summary:** we looked at some common fault models and saw how self-stabilizing clock synchronization can take them into account.
 
@@ -541,13 +499,12 @@ stateDiagram-v2
 2. On a line P1, P2, …, Pn with **no sense of direction**, will Figure 6.2 stabilize if the increments are **modulo 3**? Prove it or give a counterexample.
 3. Will the unbounded algorithm of Figure 6.1 stabilize if the **minimal** clock value plus one is assigned? What if the **average** (integer part) is used?
 
-> **Beyond the slides (hints, not official answers).**
-> - For question 1, the lecture already says that M = (n + 1)d + 1 was chosen "for ease of description" and is "not the minimal possible value", so smaller values can work; the min version of section 11 shows that 2d + 1 suffices for the min rule.
-> - For question 3 with the minimum, yes: let m be the smallest clock at the start. No clock ever goes below the current minimum, and after t pulses every processor within distance t of a processor holding m has m + t (it sees that value and nothing smaller). After d pulses all clocks equal m + d. This is the same induction as for the max rule.
+**Additional context (hints, not official answers).** 
 
----
+- For question 1, the lecture already says that M = (n + 1)d + 1 was chosen "for ease of description" and is "not the minimal possible value", so smaller values can work; the min version of section 2.5 shows that 2d + 1 suffices for the min rule.
+- For question 3 with the minimum, yes: let m be the smallest clock at the start. No clock ever goes below the current minimum, and after t pulses every processor within distance t of a processor holding m has m + t (it sees that value and nothing smaller). After d pulses all clocks equal m + d. This is the same induction as for the max rule.
 
-## 18. Recap
+### 4.2 Recap
 
 - **NTP** runs over UDP (port 123), uses 64-bit timestamps (seconds since 1900 + fraction, wrap in 2036, ~232 ps resolution). † Its two-way exchange measures the round-trip Δ; assuming equal halves gives an error of at most ±Δ/2, so smaller delay means smaller error.
 - **Digital clock synchronization:** common pulse; goal = identical clocks that go up by one per pulse.
@@ -559,14 +516,12 @@ stateDiagram-v2
   - **Max + 1 with k = 1** works with unbounded clocks, but mod M fails because of a napping M − 1.
   - **Bounded:** count/order variables mod 3 ("behind", rock-paper-scissors), take the max over **NB**; **Theorem 6.1: k = 2**.
 
----
-
-## 19. Old exam questions on this lecture
+### 4.3 Old exam questions on this lecture
 
 On the exam cheat sheet these are **Algorithm 13** (unbounded max), **Algorithm 14** (max mod (n + 1)d + 1), **Algorithm 15** (min mod 2d + 1) and **Algorithm 16** (the wait-free bounded algorithm).
 
 **October 2018, Q3d (true/false).** *"It is impossible to design self-stabilizing algorithms for digital clock synchronization in synchronous and anonymous networks … when each node can have only a constant number of states."*
-**TRUE** (Dolev §6.1, section 12): in a large enough ring the states just rotate forever.
+**TRUE** (Dolev §6.1, section 2.6): in a large enough ring the states just rotate forever.
 
 **October 2021, Q1j and October 2022 (true/false).** *"In class, we showed that there is no uniform digital clock-synchronization algorithm that uses only a constant number of states per processor. NTP uses a constant number of 64 bits to represent the clock values. Such contradictions can exist between theory and practice."*
 **FALSE.** There is no contradiction: the lower bound is for **uniform** algorithms (identical processors, no special ones). NTP is **hierarchical**, with distinguished servers (strata) connected to reference clocks, so the lower bound does not apply.
@@ -580,11 +535,9 @@ On the exam cheat sheet these are **Algorithm 13** (unbounded max), **Algorithm 
 
 **October 2025, Q3 (reconstructed).** Build a mechanism that tells each processor which others were recently active, in an asynchronous anonymous network with napping. The teacher: the **count variables and the set NB** of Algorithm 16 are the right tool, but **not** its global clock (a common clock does not fit the model); use a local counter ("local stopper") instead.
 
-> **Kid example (exam tip).** "Constant number of states" + "uniform/anonymous" → impossible (TRUE). "NTP contradicts the lower bound" → FALSE, because NTP has special servers. "Why is the unbounded clock not self-stabilizing?" → one transient fault can jump straight to the maximum.
+**Exam tip.** "Constant number of states" + "uniform/anonymous" → impossible (TRUE). "NTP contradicts the lower bound" → FALSE, because NTP has special servers. "Why is the unbounded clock not self-stabilizing?" → one transient fault can jump straight to the maximum.
 
----
-
-## 20. Related quiz topics not on the slides
+### 4.4 Related quiz topics not on the slides
 
 The course's pre-lecture quiz on this chapter (quiz 14, 56 questions on §6.1 and §6.2) follows the lecture closely. Points it asks that the lecture leaves implicit:
 
@@ -600,3 +553,10 @@ The course's pre-lecture quiz on this chapter (quiz 14, 56 questions on §6.1 an
 | What are hybrid faults? (Q21) | Transient faults plus permanent faults during and after convergence. |
 | If NB (A) is empty? (Q36) | The processor does not change its clock in that pulse. |
 | Trade-off of the bounded wait-free algorithm? (Q44) | k = 2 instead of k = 1, but bounded memory. |
+
+## Revision notes and references
+
+Technical clarifications, where the lecture material is corrected or made precise, appear in sections [1.2](#12-ntp-message-format-and-transport), [1.5](#15--ntp-the-two-way-protocol-and-its-error), [1.6](#16--ntp-measurement-modes-and-performance), [2.6](#26-a-constant-number-of-states-is-impossible), [3.3](#33-the-bounded-algorithm-rock-paper-scissors), [3.4](#34-theorem-61-the-algorithm-works-with-k--2). Where the slides and the course book differ, this guide follows the book and says so at that point.
+
+- S. Dolev, *Self-Stabilization*, MIT Press, 2000: §6.1 digital clock synchronization and §6.2 stabilization in spite of napping.
+- [RFC 5905 — Network Time Protocol version 4](https://www.rfc-editor.org/rfc/rfc5905): the current NTP specification.

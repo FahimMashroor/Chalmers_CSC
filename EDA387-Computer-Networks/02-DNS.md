@@ -2,17 +2,17 @@
 
 **Course:** EDA387/DIT663 Computer Networks, lecture "Domain Name System (DNS)" (Review 02). Part A reviews DNS as taught in the earlier course EDA344: names, delegation, resource records and glue. Part B, "Beyond EDA344", covers DNSSEC, the root KSK rollover, encrypted DNS, anycast and how DNS fails. Several slides follow the Stanford CS144 lecture by David Mazières.
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material.
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context that is not in the lecture (general knowledge, or topics that the course's pre-lecture quiz and old exams ask about). **Note on the source** marks a place where the lecture is inconsistent or imprecise. **Kid example** retells an idea with an everyday picture.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | A record | Address record | Maps a name to an IPv4 address, for example `stanford.edu. A 171.67.216.14`. |
 | AA | Authoritative Answer | Header bit set when the reply comes from a server that is in charge of (authoritative for) the name. |
@@ -61,55 +61,49 @@
 | Zone | — | A part of the name tree that is administered by one party, for example `chalmers.se`. |
 | ZSK | Zone Signing Key | The DNSSEC key that signs the ordinary records of a zone; it is itself signed by the KSK. |
 
----
+## Contents
 
-## Table of contents
+- [1. Purpose and design of DNS](#1-purpose-and-design-of-dns)
+  - [1.1 What DNS is for](#11-what-dns-is-for)
+  - [1.2 Before DNS: the hosts.txt file](#12-before-dns-the-hoststxt-file)
+  - [1.3 Goals of DNS and the "good news"](#13-goals-of-dns-and-the-good-news)
+- [2. Hierarchy, delegation and resolution](#2-hierarchy-delegation-and-resolution)
+  - [2.1 Zones, delegation and root servers](#21-zones-delegation-and-root-servers)
+  - [2.2 How one lookup travels: recursive and non-recursive queries](#22-how-one-lookup-travels-recursive-and-non-recursive-queries)
+  - [2.3 The DNS protocol: port 53, UDP and TCP](#23-the-dns-protocol-port-53-udp-and-tcp)
+- [3. Resource records and DNS messages](#3-resource-records-and-dns-messages)
+  - [3.1 Resource records](#31-resource-records)
+  - [3.2 Glue records](#32-glue-records)
+  - [3.3 Inside a DNS message](#33-inside-a-dns-message)
+  - [3.4 Secondary servers and the SOA record](#34-secondary-servers-and-the-soa-record)
+  - [3.5 MX records: where e-mail goes](#35-mx-records-where-e-mail-goes)
+  - [3.6 CNAME records: aliases](#36-cname-records-aliases)
+  - [3.7 Reverse lookups: PTR records](#37-reverse-lookups-ptr-records)
+  - [3.8 Using DNS for load balancing](#38-using-dns-for-load-balancing)
+  - [3.9 SRV and TXT records](#39-srv-and-txt-records)
+  - [3.10 DNS overview: what Part A gives us](#310-dns-overview-what-part-a-gives-us)
+- [4. Security and privacy](#4-security-and-privacy)
+  - [4.1 What DNS never promised](#41-what-dns-never-promised)
+  - [4.2 Cache poisoning and the Kaminsky attack](#42-cache-poisoning-and-the-kaminsky-attack)
+  - [4.3 DNSSEC: a chain of trust](#43-dnssec-a-chain-of-trust)
+  - [4.4 Signing and validating are different curves](#44-signing-and-validating-are-different-curves)
+  - [4.5 The root KSK rollover](#45-the-root-ksk-rollover)
+  - [4.6 Sweden as an outlier](#46-sweden-as-an-outlier)
+  - [4.7 Encrypting the query: DoT, DoH and DoQ](#47-encrypting-the-query-dot-doh-and-doq)
+  - [4.8 Who are you hiding from?](#48-who-are-you-hiding-from)
+- [5. Resilience and failure](#5-resilience-and-failure)
+  - [5.1 Anycast and root resilience](#51-anycast-and-root-resilience)
+  - [5.2 How DNS fails](#52-how-dns-fails)
+- [6. Practice and review](#6-practice-and-review)
+  - [6.1 Exam skill: reading dig output](#61-exam-skill-reading-dig-output)
+  - [6.2 Related quiz topics not in the lecture](#62-related-quiz-topics-not-in-the-lecture)
+- [Revision notes and references](#revision-notes-and-references)
 
-- [1. What DNS is for](#1-what-dns-is-for)
-- [2. Before DNS: the hosts.txt file](#2-before-dns-the-hoststxt-file)
-- [3. Goals of DNS and the "good news"](#3-goals-of-dns-and-the-good-news)
-- [4. Zones, delegation and root servers](#4-zones-delegation-and-root-servers)
-- [5. How one lookup travels: recursive and non-recursive queries](#5-how-one-lookup-travels-recursive-and-non-recursive-queries)
-- [6. The DNS protocol: port 53, UDP and TCP](#6-the-dns-protocol-port-53-udp-and-tcp)
-- [7. Resource records](#7-resource-records)
-- [8. Glue records](#8-glue-records)
-  - [8.1 The chicken-and-egg problem](#81-the-chicken-and-egg-problem)
-  - [8.2 Walking the tree by hand with dig](#82-walking-the-tree-by-hand-with-dig)
-  - [8.3 The Chalmers case](#83-the-chalmers-case)
-  - [8.4 Verify it yourself](#84-verify-it-yourself)
-- [9. Inside a DNS message](#9-inside-a-dns-message)
-  - [9.1 The five sections](#91-the-five-sections)
-  - [9.2 The header](#92-the-header)
-  - [9.3 How a resource record is encoded](#93-how-a-resource-record-is-encoded)
-  - [9.4 How names are encoded](#94-how-names-are-encoded)
-  - [9.5 Name compression](#95-name-compression)
-- [10. Secondary servers and the SOA record](#10-secondary-servers-and-the-soa-record)
-- [11. MX records: where e-mail goes](#11-mx-records-where-e-mail-goes)
-- [12. CNAME records: aliases](#12-cname-records-aliases)
-- [13. Reverse lookups: PTR records](#13-reverse-lookups-ptr-records)
-- [14. Using DNS for load balancing](#14-using-dns-for-load-balancing)
-- [15. SRV and TXT records](#15-srv-and-txt-records)
-- [16. DNS overview: what Part A gives us](#16-dns-overview-what-part-a-gives-us)
-- [17. What DNS never promised](#17-what-dns-never-promised)
-- [18. Cache poisoning and the Kaminsky attack](#18-cache-poisoning-and-the-kaminsky-attack)
-- [19. DNSSEC: a chain of trust](#19-dnssec-a-chain-of-trust)
-- [20. Signing and validating are different curves](#20-signing-and-validating-are-different-curves)
-- [21. The root KSK rollover](#21-the-root-ksk-rollover)
-  - [21.1 RFC 5011: changing a key without a flag day](#211-rfc-5011-changing-a-key-without-a-flag-day)
-  - [21.2 What could go wrong](#212-what-could-go-wrong)
-- [22. Sweden as an outlier](#22-sweden-as-an-outlier)
-- [23. Encrypting the query: DoT, DoH and DoQ](#23-encrypting-the-query-dot-doh-and-doq)
-- [24. Who are you hiding from?](#24-who-are-you-hiding-from)
-- [25. Anycast and root resilience](#25-anycast-and-root-resilience)
-- [26. How DNS fails](#26-how-dns-fails)
-- [27. Exam skill: reading dig output](#27-exam-skill-reading-dig-output)
-- [28. Related quiz topics not in the lecture](#28-related-quiz-topics-not-in-the-lecture)
+## 1. Purpose and design of DNS
 
----
+### 1.1 What DNS is for
 
-## 1. What DNS is for
-
-### Parsing a URL
+#### Parsing a URL
 
 When you type an address into a browser, the browser first splits it into parts. The lecture's example is:
 
@@ -132,7 +126,7 @@ block-beta
 
 The **host** part is a name, but computers send packets to **IP addresses**. DNS is the system that turns the name into the address.
 
-### How do we find the address?
+#### How do we find the address?
 
 The lecture shows the tool `nslookup`:
 
@@ -150,7 +144,7 @@ Address: 2606:2800:220:1:248:1893:25c8:1946
 
 The reply gives one IPv4 address and one IPv6 address. "Non-authoritative" means the answer came from a cache, not from the server that owns `example.com`. Also, `nslookup` can do forward lookups (name → address), reverse lookups (address → name), and ask for record types like A, AAAA, MX, NS and CNAME, but professionals usually prefer `dig`, which shows more.
 
-### Motivation
+#### Motivation
 
 - IP addresses are hard to remember, so we need to map **symbolic names to IP addresses**.
 - This is done by **library functions and servers**: the function `getaddrinfo()` in your program talks to a name server over UDP (or TCP).
@@ -158,11 +152,7 @@ The reply gives one IPv4 address and one IPv6 address. "Non-authoritative" means
 
 The lecture's picture shows a user sending mail to `user@example.com`. The mail program asks the name server about `example.com`, gets back `93.184.216.34`, and then opens a TCP connection over IP to that address.
 
-> **Kid example.** DNS is the phone book of the Internet. You know your friend's name; the phone book gives you their number. Your phone (the computer) can only dial numbers.
-
----
-
-## 2. Before DNS: the hosts.txt file
+### 1.2 Before DNS: the hosts.txt file
 
 In the early ARPANET, every host was listed in **one file, `hosts.txt`**:
 
@@ -194,19 +184,17 @@ flowchart LR
   old -->|"did not scale"| new
 ```
 
-> **Note on the source.** The lecture says "look at your hosts.txt in `C:\Windows\System32\drivers\etc`". On Windows the file in that folder is called **`hosts`** (no `.txt` extension); on Linux and macOS it is `/etc/hosts`. It is the modern remnant of the old idea: entries in it are used before (or instead of) DNS on your own machine.
+**Technical clarification.** The lecture says "look at your hosts.txt in `C:\Windows\System32\drivers\etc`". On Windows the file in that folder is called **`hosts`** (no `.txt` extension); on Linux and macOS it is `/etc/hosts`. It is the modern remnant of the old idea: entries in it are used before (or instead of) DNS on your own machine.
 
----
+### 1.3 Goals of DNS and the "good news"
 
-## 3. Goals of DNS and the "good news"
-
-### Goals
+#### Goals
 
 1. **Scalability.** DNS must handle a huge number of records, "potentially exponential in name size", because software can make up (synthesize) names on the fly.
 2. **Distributed control.** Let people control their own names.
 3. **Fault tolerance.** Old software assumed `hosts.txt` was always there, and lookups that fail can make programs fail badly. So DNS must **minimize lookup failures** even when other parts of the network have problems.
 
-### The good news
+#### The good news
 
 Two properties make these goals easier:
 
@@ -215,13 +203,11 @@ Two properties make these goals easier:
 
 Together these suggest **aggressive caching**: once you have looked up a name, remember the result and do not ask again in the near future. How long you may remember is set by the record's **TTL** (time to live).
 
-> **Kid example.** You ask your teacher for the pizza shop's number and write it on a note that says "valid for one week". For a week you use the note and do not bother the teacher. That note is a cache, and "one week" is the TTL.
+## 2. Hierarchy, delegation and resolution
 
----
+### 2.1 Zones, delegation and root servers
 
-## 4. Zones, delegation and root servers
-
-### Zones and delegation
+#### Zones and delegation
 
 DNS breaks the namespace (the tree of all names) into **zones**:
 
@@ -269,14 +255,12 @@ Arrows point from a parent name to a child name. Each box is one zone: an organi
 
 A name is read **from right to left**, from general to specific: `www.chalmers.se.` means "inside the root, inside `se`, inside `chalmers`, the host `www`". The final dot is the root.
 
-### Root servers
+#### Root servers
 
 - Root (and TLD) servers must be **widely replicated**, because every lookup that is not cached starts at the top.
-- For some, operators use tricks like **IP anycast**: the same IP address is announced from many places, and the network sends each query to the nearest copy. (More in [section 25](#25-anycast-and-root-resilience).)
+- For some, operators use tricks like **IP anycast**: the same IP address is announced from many places, and the network sends each query to the nearest copy. (More in [section 5.1](#51-anycast-and-root-resilience).)
 
----
-
-## 5. How one lookup travels: recursive and non-recursive queries
+### 2.2 How one lookup travels: recursive and non-recursive queries
 
 There are **two types of query**:
 
@@ -306,13 +290,9 @@ sequenceDiagram
 
 Step 1 is **recursive**: the host asks once and waits for the final answer. Steps 2, 4 and 6 are **non-recursive**: each server either answers or gives a **referral** ("I don't know, but ask these servers").
 
-> **Note on the source.** The figure numbers the arrows 1 to 8, but the lecture's explanation describes only steps 1 to 7 and say the local server returns the answer to the client "(7)". In the figure, step 7 is the authoritative server's reply to the local server and step 8 is the local server's reply to the host.
+**Technical clarification.** The figure numbers the arrows 1 to 8, but the lecture's explanation describes only steps 1 to 7 and say the local server returns the answer to the client "(7)". In the figure, step 7 is the authoritative server's reply to the local server and step 8 is the local server's reply to the host.
 
-> **Kid example.** You ask your mum (the recursive resolver) "Where does Sara live?". Mum calls the school office (root), who says "ask her class teacher" (TLD). The teacher says "ask Sara's parents" (authoritative server). They give the address. Mum tells you. You only asked once; mum did all the calling, and she writes the address down for next time.
-
----
-
-## 6. The DNS protocol: port 53, UDP and TCP
+### 2.3 The DNS protocol: port 53, UDP and TCP
 
 - DNS uses **TCP or UDP port 53**.
 - **Most traffic uses UDP.** It is a lightweight protocol with a **512-byte message limit** for UDP.
@@ -320,13 +300,13 @@ Step 1 is **recursive**: the host asks once and waits for the final answer. Step
 - TCP is a byte stream with no message boundaries, so over TCP **every message is prefixed with its length** as a 16-bit integer.
 - **One bit in the query** (RD, "recursion desired") says whether the query is recursive.
 
-> **Note on the source.** The lecture's explanation says "the UDP protocol has a maximum message size of 512 bytes". That limit is a rule of **DNS** (RFC 1035), not of UDP: UDP itself can carry up to about 65,500 bytes of data.
+**Technical clarification.** The lecture's explanation says "the UDP protocol has a maximum message size of 512 bytes". That limit is a rule of **DNS** (RFC 1035), not of UDP: UDP itself can carry up to about 65,500 bytes of data.
 
-> **Beyond the slides.** Since 1999 the extension **EDNS(0)** (now RFC 6891) lets a client say "I can accept bigger UDP replies", for example 1,232 or 4,096 bytes. This matters for DNSSEC, whose signatures make replies much larger than 512 bytes.
+**Additional context.** Since 1999 the extension **EDNS(0)** (now RFC 6891) lets a client say "I can accept bigger UDP replies", for example 1,232 or 4,096 bytes. This matters for DNSSEC, whose signatures make replies much larger than 512 bytes.
 
----
+## 3. Resource records and DNS messages
 
-## 7. Resource records
+### 3.1 Resource records
 
 **All DNS information is stored as resource records (RRs):**
 
@@ -357,7 +337,7 @@ stanford.edu.   172800  IN  NS  Argus.stanford.edu.
 
 Read the first line as: "the name `stanford.edu.` has an Internet-class address record with value 171.67.216.14, and you may cache that for 1,800 seconds". The third line says that `Argus.stanford.edu.` is a name server for `stanford.edu`, and that fact may be cached for 172,800 seconds (2 days). NS records usually have long TTLs because they change rarely.
 
-### How the local server knows the root servers
+#### How the local server knows the root servers
 
 The local name server must be configured with a **root cache file** (also called the root hints file), which lists the root name servers and their addresses:
 
@@ -370,13 +350,11 @@ B.ROOT-SERVERS.NET.  3600000  A   128.9.0.107
 
 Each line is one record: name, TTL, type, data. The NS lines say "the root zone `.` is served by A.ROOT-SERVERS.NET (and B, …)"; the A lines give their addresses. With this file the resolver can start every lookup from the top.
 
-> **Note on the source.** This file excerpt is old. `198.41.0.4` is still the address of A-root, but B-root has been renumbered more than once since `128.9.0.107` (most recently in 2023). Real resolvers ship an up-to-date copy, published by IANA. The lecture also describes "six columns" as if both lines were one row; in fact each line is a separate record with four fields.
+**Technical clarification.** This file excerpt is old. `198.41.0.4` is still the address of A-root, but B-root has been renumbered more than once since `128.9.0.107` (most recently in 2023). Real resolvers ship an up-to-date copy, published by IANA. The lecture also describes "six columns" as if both lines were one row; in fact each line is a separate record with four fields.
 
----
+### 3.2 Glue records
 
-## 8. Glue records
-
-### 8.1 The chicken-and-egg problem
+#### The chicken-and-egg problem
 
 To look up names ending in `.stanford.edu.`, you ask `Argus.stanford.edu.`. But how do you get the address of `Argus.stanford.edu.`? It is itself a name inside `stanford.edu`, so to find it you would have to ask … `Argus.stanford.edu.`
 
@@ -403,11 +381,9 @@ flowchart LR
   end
 ```
 
-> **Kid example.** The school office says "for questions about class 5B, ask 5B's teacher". But the only list of where 5B's teacher sits hangs inside 5B's own room, and you need the teacher to get in. Stuck! So the office also writes down the teacher's room number for you. That room number is the glue.
-
 **When is glue needed?** Only when the name server's name is **inside the zone being delegated** (an "in-bailiwick" server). If the server's name is somewhere else in the tree, the resolver can look it up the normal way, and no glue is needed.
 
-### 8.2 Walking the tree by hand with dig
+#### Walking the tree by hand with dig
 
 The lecture looks up `www.scs.stanford.edu` with no cache, by asking each server in turn with `dig +norec` (`+norec` turns off the RD bit, so each server only says what it knows):
 
@@ -437,7 +413,7 @@ sequenceDiagram
 
 This gives the intermediate results for `.edu`, `stanford.edu`, `scs.stanford.edu` and finally `www.scs.stanford.edu`. "Where are the glue records?" The lecture's answer is **in the first and second replies**, in the **ADDITIONAL** section. The reason fits the rule above: the `edu` servers (`a.edu-servers.net`, …) and `Argus.stanford.edu` are named inside the zones being delegated, so the parent must supply their addresses. The servers for `scs.stanford.edu` include `ns1.fs.net`, which lives in a completely different part of the tree (`fs.net`), so the resolver can find it by a normal lookup.
 
-### 8.3 The Chalmers case
+#### The Chalmers case
 
 To reach `www.chalmers.se`, a resolver asks the `.se` servers: who serves `chalmers.se`? According to the slide, there are four answers:
 
@@ -467,9 +443,9 @@ Two lessons:
 - **Resilience.** Chalmers' own operations documentation explains why one name server is kept off site: so that some data stays reachable when Chalmers' connection to SUNET (the Swedish university network) is down. Their example is e-mail: a sending mail server that gets **no answer at all** may throw the message away, but one that gets an answer keeps retrying. So the availability of the naming layer changes how a service two layers above it fails. `dns.uu.se` is not just a different building; it is a different **autonomous system** (see the routing guide).
 - **Caution.** The delegation comes from an undated Chalmers page and may be old. The lecturer is told to check it before teaching. If Chalmers no longer has in-bailiwick servers, the lesson becomes "when is glue *not* needed".
 
-> **Beyond the slides.** The same delegation appears in the October 2018 exam (dig output captured in June 2018): asking `a.ns.se` for `www.chalmers.se` returned no answer, four NS records in the authority section, and the A records of `ns1`, `ns2`, `ns3.chalmers.se` in the additional section. That is exactly a referral with glue. See [section 27](#27-exam-skill-reading-dig-output).
+**Additional context.** The same delegation appears in the October 2018 exam (dig output captured in June 2018): asking `a.ns.se` for `www.chalmers.se` returned no answer, four NS records in the authority section, and the A records of `ns1`, `ns2`, `ns3.chalmers.se` in the additional section. That is exactly a referral with glue. See [section 6.1](#61-exam-skill-reading-dig-output).
 
-### 8.4 Verify it yourself
+#### Verify it yourself
 
 | Command | What it shows |
 |---|---|
@@ -480,15 +456,13 @@ Two lessons:
 
 - **The glue is the ADDITIONAL section of the referral.** In `dig +trace`, the AUTHORITY section lists the NS names, and the ADDITIONAL section carries their addresses. Without it the resolver would have names and no way to reach them.
 - **Windows:** `nslookup` hides the ADDITIONAL section, which is exactly the thing being taught. Use DNSViz or WSL (Linux on Windows) to run `dig`.
-- **The DS question has two possible outcomes, and both teach something.** If a DS record comes back, `.se` signs a commitment to a Chalmers key and the trust chain runs root → `se` → `chalmers.se`. If nothing comes back, `.se` is signed but `chalmers.se` is not, so the chain stops at the parent: the "signing versus validating" gap of [section 20](#20-signing-and-validating-are-different-curves).
+- **The DS question has two possible outcomes, and both teach something.** If a DS record comes back, `.se` signs a commitment to a Chalmers key and the trust chain runs root → `se` → `chalmers.se`. If nothing comes back, `.se` is signed but `chalmers.se` is not, so the chain stops at the parent: the "signing versus validating" gap of [section 4.4](#44-signing-and-validating-are-different-curves).
 
 **The pivot to Part B.** Delegation is one mechanism carrying two things: **addresses** (glue, which we have just seen) and **trust** (DS, which comes in Part B). The resolver walks the same path both times.
 
----
+### 3.3 Inside a DNS message
 
-## 9. Inside a DNS message
-
-### 9.1 The five sections
+#### The five sections
 
 The structure of a DNS message is defined in **RFC 1035**. **The same format is used for queries and replies.**
 
@@ -507,7 +481,7 @@ block-beta
 - **Authority** allows for delegation: it holds NS records saying "ask these servers".
 - **Additional** holds glue and other RRs the client might need next.
 
-### 9.2 The header
+#### The header
 
 The header is 12 bytes: six 16-bit rows.
 
@@ -540,9 +514,9 @@ The second row is split into eight fields, from the first bit to the last: QR (1
 | NSCOUNT | 16 | Number of RRs in the Authority section. |
 | ARCOUNT | 16 | Number of RRs in the Additional section. |
 
-> **Beyond the slides.** Common RCODE values: 0 NOERROR, 1 FORMERR (bad query), 2 SERVFAIL (server failed, for example a DNSSEC validation failure), 3 NXDOMAIN (name does not exist), 5 REFUSED. In `dig` output the flags line shows the set bits in lower case, for example `flags: qr aa rd`. Later RFCs gave two of the three Z bits a meaning for DNSSEC (AD, "authenticated data", and CD, "checking disabled").
+**Additional context.** Common RCODE values: 0 NOERROR, 1 FORMERR (bad query), 2 SERVFAIL (server failed, for example a DNSSEC validation failure), 3 NXDOMAIN (name does not exist), 5 REFUSED. In `dig` output the flags line shows the set bits in lower case, for example `flags: qr aa rd`. Later RFCs gave two of the three Z bits a meaning for DNSSEC (AD, "authenticated data", and CD, "checking disabled").
 
-### 9.3 How a resource record is encoded
+#### How a resource record is encoded
 
 ```mermaid
 block-beta
@@ -557,14 +531,14 @@ block-beta
 
 | Field | Size | Meaning |
 |---|---|---|
-| NAME | variable | The domain name, encoded as in [9.4](#94-how-names-are-encoded). |
+| NAME | variable | The domain name, encoded as in [3.3](#how-names-are-encoded). |
 | TYPE | 16 bits | The record type (A = 1, NS = 2, CNAME = 5, MX = 15, …). |
 | CLASS | 16 bits | Usually IN = 1. |
 | TTL | 32 bits | Seconds the record may be cached. |
 | RDLENGTH | 16 bits | Length of RDATA in bytes. |
 | RDATA | RDLENGTH bytes | The data: 4 bytes for an A record, a name for an NS record, and so on. |
 
-### 9.4 How names are encoded
+#### How names are encoded
 
 - A DNS name is a series of **labels**. `www.stanford.edu.` has 3 labels: `www`, `stanford`, `edu`.
 - Labels may contain letters, digits and `-`, but **should not start or end with `-`**.
@@ -583,9 +557,9 @@ So the whole name takes 1 + 3 + 1 + 8 + 1 + 3 + 1 = **18 bytes**.
 
 - **Names are case-insensitive** (`WWW.Stanford.EDU` is the same name), **but the server must preserve the case of the question in its reply.** The lecture suggests trying `www.sTANford.EDu` and looking at the authority section.
 
-> **Beyond the slides.** A whole name may be at most 255 bytes in this encoded form (RFC 1035).
+**Additional context.** A whole name may be at most 255 bytes in this encoded form (RFC 1035).
 
-### 9.5 Name compression
+#### Name compression
 
 A DNS message often repeats the same name endings (for example `stanford.edu` in the question, in the answer, in the NS records and in the glue). The case-preservation rule makes this worse, because the server cannot just rewrite everything in one style. So DNS allows **pointer labels that re-use suffixes**:
 
@@ -602,11 +576,9 @@ The first two bits are both 1; the remaining 14 bits are the offset (widths roug
 
 **Worked example.** The header is 12 bytes, so the question name always begins at byte offset 12 (0x0C). If an answer record has the same name as the question, its NAME field can be just the two bytes `C0 0C`: `0xC00C − 0xC000 = 0x000C = 12`, "the name that starts at byte 12". Two bytes instead of 18 for `www.stanford.edu`. A pointer can also come after some labels, for example `04 mail` followed by a pointer to `stanford.edu` stored elsewhere in the message.
 
-> **Beyond the slides.** A quiz question from 2023–2025 asks for the main purpose of compression: re-using repeated suffixes inside one message, which keeps messages small and avoids truncation.
+**Additional context.** A quiz question from 2023–2025 asks for the main purpose of compression: re-using repeated suffixes inside one message, which keeps messages small and avoids truncation.
 
----
-
-## 10. Secondary servers and the SOA record
+### 3.4 Secondary servers and the SOA record
 
 - **Availability requires geographically dispersed replicas.** For example, Stanford could ask MIT to host a secondary copy of `scs.stanford.edu`.
 - **Typical setup:** one master (primary) server and many slave (secondary) servers that copy the zone from it.
@@ -629,23 +601,19 @@ flowchart LR
 
 The SOA record "states administrative information for a zone" (try `dig stanford.edu soa`), and it also **tells you how long you can cache negative results** (answers saying a name does not exist).
 
-> **Beyond the slides.** The SOA's seven data fields, as listed in the course quiz guide and RFC 1035: **MNAME** (the primary server), **RNAME** (the administrator's e-mail address, with the `@` written as a dot), **SERIAL** (version number; secondaries copy the zone when it grows), **REFRESH** (how often secondaries check), **RETRY** (how long to wait after a failed check), **EXPIRE** (when a secondary that cannot reach the primary stops answering), and **MINIMUM** (today used for the negative-caching time, RFC 2308).
+**Additional context.** The SOA's seven data fields, as listed in the course quiz guide and RFC 1035: **MNAME** (the primary server), **RNAME** (the administrator's e-mail address, with the `@` written as a dot), **SERIAL** (version number; secondaries copy the zone when it grows), **REFRESH** (how often secondaries check), **RETRY** (how long to wait after a failed check), **EXPIRE** (when a secondary that cannot reach the primary stops answering), and **MINIMUM** (today used for the negative-caching time, RFC 2308).
 
----
-
-## 11. MX records: where e-mail goes
+### 3.5 MX records: where e-mail goes
 
 "For historical reasons, mail does not have to use A records directly." An **MX (Mail Exchange)** record names the servers that accept mail for a domain.
 
 The lecture's example: `ping scs.stanford.edu` says there is **no such host** (there is no A record), but you can still mail the CS144 staff at that domain, because `dig scs.stanford.edu mx` returns MX records pointing at real mail servers.
 
-> **Beyond the slides.** An MX record is written `name TTL IN MX preference host`, for example `example.com. 3600 IN MX 10 mail.example.com.` A **lower** preference number means "try this server first".
+**Additional context.** An MX record is written `name TTL IN MX preference host`, for example `example.com. 3600 IN MX 10 mail.example.com.` A **lower** preference number means "try this server first".
 
-> **Beyond the slides (exam warning).** In the October 2024 exam results, the question "Which DNS record type is used for email delivery?" shows "A record" as correct. That key is wrong: the right answer is **MX record**.
+**Additional context (exam warning).** In the October 2024 exam results, the question "Which DNS record type is used for email delivery?" shows "A record" as correct. That key is wrong: the right answer is **MX record**.
 
----
-
-## 12. CNAME records: aliases
+### 3.6 CNAME records: aliases
 
 *(Part B starts here: "Beyond EDA344". Everything from this point on is new compared with the introductory course.)*
 
@@ -655,8 +623,6 @@ A **CNAME** record says a name is an **alias**:
 
 It works **as if every RR of the canonical name also belonged to the alias**. A program can ask for the canonical name with the **`AI_CANONNAME`** flag to `getaddrinfo()`.
 
-> **Kid example.** A CNAME is a nickname. If your friend Alexander is called "Alex" by everyone, then asking "Where does Alex live?" gives the same answer as asking about Alexander, because "Alex" just points to the real name.
-
 Examples, to save typing:
 
 ```
@@ -664,7 +630,7 @@ wb.scs.stanford.edu.  CNAME  williamsburg-bridge.scs.stanford.edu.
 mb.scs.stanford.edu.  CNAME  manhattan-bridge.scs.stanford.edu.
 ```
 
-### The Yahoo example
+#### The Yahoo example
 
 - `www.yahoo.fr` has one CNAME, `rc.yahoo.com`.
 - `www.yahoo.de` has the **same** CNAME, `rc.yahoo.com`.
@@ -689,7 +655,7 @@ flowchart LR
 - **CNAME chaining** lets Yahoo hand responsibility to another company's DNS name (AWS, Cloudflare, Akamai) instead of hard-coding IP addresses.
 - **Flexibility:** if AWS changes the addresses behind its name, Yahoo does not have to touch its own DNS.
 
-### CNAME rules †
+#### CNAME rules †
 
 *(This subsection is hidden material †.)*
 
@@ -697,11 +663,9 @@ flowchart LR
 - The **answer section** of a reply *can* contain the CNAME for the query name **plus** other RRs for the canonical name. That is how the Yahoo chain above arrives in one reply.
 - **Don't point MX records at CNAMEs**, because the server then puts no A records in the additional section. (The lecture suggests trying `bad-mx.scs.stanford.edu.`)
 
-> **Beyond the slides.** The rule "one name cannot have both a CNAME and other records" is why you cannot put a CNAME at a zone's top (the "apex", like `example.com` itself). Some DNS providers offer non-standard workarounds called ALIAS or ANAME records.
+**Additional context.** The rule "one name cannot have both a CNAME and other records" is why you cannot put a CNAME at a zone's top (the "apex", like `example.com` itself). Some DNS providers offer non-standard workarounds called ALIAS or ANAME records.
 
----
-
-## 13. Reverse lookups: PTR records
+### 3.7 Reverse lookups: PTR records
 
 **Remember traceroute?** It shows the **names** of routers on a path, which it learns through **reverse lookups**: going from an address back to a name.
 
@@ -718,7 +682,7 @@ sing.stanford.edu           -> 171.67.76.65         (A)
 
 The forward and reverse directions agree: the PTR points to the canonical name `sing`, not to the alias `tinyos`.
 
-### Mapping addresses to names
+#### Mapping addresses to names
 
 `name [TTL] [IN] PTR ptrdname`
 
@@ -743,11 +707,9 @@ flowchart TD
 
 **Historical note.** ARPA (the US Advanced Research Projects Agency) funded the original Internet. The acronym has since been **re-purposed** (RFC 3172) as **Address and Routing Parameter Area**.
 
-> **Beyond the slides.** `dig -x 129.16.212.14` is a shortcut that asks for the PTR record of `14.212.16.129.in-addr.arpa` (this appears in a 2015 exam). In `ip6.arpa`, an IPv6 address is reversed **one hexadecimal digit at a time**, so a reverse name has 32 labels.
+**Additional context.** `dig -x 129.16.212.14` is a shortcut that asks for the PTR record of `14.212.16.129.in-addr.arpa` (this appears in a 2015 exam). In `ip6.arpa`, an IPv6 address is reversed **one hexadecimal digit at a time**, so a reverse name has 32 labels.
 
----
-
-## 14. Using DNS for load balancing
+### 3.8 Using DNS for load balancing
 
 - You can have **multiple RRs of most types for one name**.
   - This is **required** for NS records (for availability).
@@ -757,8 +719,6 @@ flowchart TD
 - `getaddrinfo()` returns a linked list of `addrinfo` structures, and **most apps just use the first address returned**.
 - So even if your name server caches the results, **clients are spread among the servers**.
 - Try it: run `dig cnn.com` several times and watch the order change.
-
-> **Kid example.** A pizza chain has one phone number but four kitchens. The person who answers reads the kitchen list in a different order to each caller, and most callers just go to the first kitchen they hear. So the customers spread out over all four kitchens.
 
 ```mermaid
 sequenceDiagram
@@ -773,11 +733,9 @@ sequenceDiagram
 
 This is called **round-robin DNS**. It is cheap, but it cannot see whether a server is overloaded or down; a dead address keeps being handed out until someone removes it (and caches expire).
 
----
+### 3.9 SRV and TXT records
 
-## 15. SRV and TXT records
-
-### SRV records (service location)
+#### SRV records (service location)
 
 `_service._proto.name [TTL] [IN] SRV prio weight port target`
 
@@ -793,9 +751,9 @@ This is called **round-robin DNS**. It is cheap, but it cannot see whether a ser
 
 SRV is like a **generalization of MX records to any service**. Example from the lecture: `dig _sip._tls.microsoft.com SRV`. The lecture gives `_sip._tcp.example.com. 3600 IN SRV 10 5 5060 sipserver.example.com.`, meaning: priority 10, weight 5, port 5060, on host `sipserver.example.com`.
 
-> **Note on the source.** In `_sip._tls.microsoft.com`, the protocol label is `_tls`, although the lecture says `_proto` is `_tcp` or `_udp`. SIP over TLS is a real convention that uses `_tls` here; the lecture's rule describes the general case.
+**Technical clarification.** In `_sip._tls.microsoft.com`, the protocol label is `_tls`, although the lecture says `_proto` is `_tcp` or `_udp`. SIP over TLS is a real convention that uses `_tls` here; the lecture's rule describes the general case.
 
-### TXT records
+#### TXT records
 
 `name [TTL] [IN] TXT "text"`
 
@@ -810,13 +768,11 @@ gmail.com. 3600 IN TXT "v=spf1 ip4:216.239.32.0/19 ip4:64.233.160.0/19 ip4:66.24
 
 A receiving mail server trusts mail from those ranges. The final `all` term says what to do with mail from **any other** address.
 
-> **Note on the source.** The lecture's record ends in `~all`, but the slide text says "otherwise (`?all`) it is suspicious (SoftFail: may be marked spam)", and the lecture's explanation shows a version ending in `?all`. In SPF (RFC 7208) these are different: **`~all` = SoftFail** ("probably not allowed; accept but mark as suspicious"), while **`?all` = Neutral** ("no statement"). Other qualifiers: `-all` = Fail (reject), `+all` = Pass. So the lecture's explanation fits `~all`, not `?all`.
+**Technical clarification.** The lecture's record ends in `~all`, but the slide text says "otherwise (`?all`) it is suspicious (SoftFail: may be marked spam)", and the lecture's explanation shows a version ending in `?all`. In SPF (RFC 7208) these are different: **`~all` = SoftFail** ("probably not allowed; accept but mark as suspicious"), while **`?all` = Neutral** ("no statement"). Other qualifiers: `-all` = Fail (reject), `+all` = Pass. So the lecture's explanation fits `~all`, not `?all`.
 
-> **Beyond the slides.** A 2023–2025 multiple-choice question asks for the difference between SRV and TXT: SRV gives the server (host and port) for a specific service; TXT carries extra policy or configuration text, such as SPF rules.
+**Additional context.** A 2023–2025 multiple-choice question asks for the difference between SRV and TXT: SRV gives the server (host and port) for a specific service; TXT carries extra policy or configuration text, such as SPF rules.
 
----
-
-## 16. DNS overview: what Part A gives us
+### 3.10 DNS overview: what Part A gives us
 
 - DNS is a **distributed system for mapping names to values** (for example IP addresses).
 - A **read-dominated workload allows caching**.
@@ -826,9 +782,9 @@ A receiving mail server trusts mail from those ranges. The final `all` term says
 
 The last two points are where Part B begins.
 
----
+## 4. Security and privacy
 
-## 17. What DNS never promised
+### 4.1 What DNS never promised
 
 - The original design guarantees **neither integrity nor confidentiality**.
   - **Integrity** = is the answer true and unchanged?
@@ -850,9 +806,7 @@ The two gaps were filled by **different mechanisms**, and students mix them up c
 
 **Link back:** this is the same story as BGP in the routing lecture: a trusting design from an era of known operators, secured afterwards by bolting on a public-key infrastructure (RPKI there, DNSSEC here).
 
----
-
-## 18. Cache poisoning and the Kaminsky attack
+### 4.2 Cache poisoning and the Kaminsky attack
 
 - A resolver **caches whatever answer it accepts, and serves it to everyone.**
 - **Kaminsky (2008):** forge answers faster than the legitimate reply arrives.
@@ -860,8 +814,6 @@ The two gaps were filled by **different mechanisms**, and students mix them up c
 - **Source-port randomisation raised the cost. It did not fix the design.**
 
 Caching is what makes DNS scale, and it is also what makes the attack worth doing: **poison one resolver and you have poisoned every user behind it, for the lifetime of the TTL.**
-
-> **Kid example.** Cache poisoning is like someone sneaking a false phone number into the class phone list. Everyone who looks at the list afterwards calls the wrong number, until the list is thrown away and written again (the TTL runs out). The prankster only needs to win the race to the list once, before the true number arrives.
 
 **The mechanics.** The attacker makes the resolver send a query, then races the real authoritative server with forged replies. A forgery wins if it has the right source address, port, transaction ID and question. In 2008 the only real unknown was the 16-bit ID: about 65,000 possibilities.
 
@@ -884,16 +836,12 @@ sequenceDiagram
 
 **The point the lecture insists on:** that is a **mitigation, not a fix**. It makes the attack expensive; it does not let a resolver tell a true answer from a false one. Nothing is authenticated. "What would it take to actually verify an answer?" Signatures, which is the next section.
 
----
-
-## 19. DNSSEC: a chain of trust
+### 4.3 DNSSEC: a chain of trust
 
 - **RRSIG** signs a record set; **DNSKEY** holds the signing (public) key.
 - **DS** in the **parent** zone commits to the child's key, so each delegation becomes a link in a chain.
 - **Validation walks the same path as resolution**, checking signatures at each step.
 - **The chain is only as long as the delegations that are signed.**
-
-> **Kid example.** DNSSEC is like a chain of signed permission slips. The head teacher (the root) signs a slip saying "this is the real stamp of class 5B's teacher" (the DS record). The class teacher signs the answers with that stamp. You trust the answer because you can follow the signatures all the way up to the head teacher's stamp, which everyone already knows. If one teacher in the chain does not sign, the chain breaks there.
 
 | Record | Lives in | What it is |
 |---|---|---|
@@ -936,11 +884,9 @@ The **only thing you must trust in advance is the root key**: a single trust anc
 1. **DNSSEC does not encrypt.** Every record is still public, just signed.
 2. **A signed answer is not automatically a secure answer.** If any link in the chain is unsigned, the chain simply stops, and the answer is **"insecure"** (not checked), rather than **"bad"** (proved false).
 
-> **Beyond the slides.** In practice a zone usually has two kinds of key: a **KSK** (key signing key) that signs only the DNSKEY set, and a **ZSK** (zone signing key) that signs all the other records. The DS record in the parent points at the KSK. This split lets the busy ZSK be changed often without involving the parent. The root KSK in [section 21](#21-the-root-ksk-rollover) is "the key that signs the key that signs the root zone".
+**Additional context.** In practice a zone usually has two kinds of key: a **KSK** (key signing key) that signs only the DNSKEY set, and a **ZSK** (zone signing key) that signs all the other records. The DS record in the parent points at the KSK. This split lets the busy ZSK be changed often without involving the parent. The root KSK in [section 4.5](#45-the-root-ksk-rollover) is "the key that signs the key that signs the root zone".
 
----
-
-## 20. Signing and validating are different curves
+### 4.4 Signing and validating are different curves
 
 - **Signing** a zone is the **zone owner's** decision.
 - **Validating** an answer is the **resolver operator's** decision.
@@ -956,9 +902,7 @@ Validation is near a third of queries because **a handful of large public resolv
 
 **Link back — the important bit:** this is the same shape as **RPKI** in the routing lecture: prefixes signed at roughly 67%, enforcement near 12%. Different protocol, different decade, identical structure: **the party who pays and the party who benefits are not the same party.** The lecture says you will see it a third time with BBR (TCP congestion control).
 
----
-
-## 21. The root KSK rollover
+### 4.5 The root KSK rollover
 
 - **11 October 2026:** KSK-2024 becomes the active signing key for the root zone.
 - **11 January 2027:** KSK-2017 is revoked.
@@ -980,7 +924,7 @@ timeline
   11 Jan 2027 : KSK-2017 revoked
 ```
 
-### 21.1 RFC 5011: changing a key without a flag day
+#### RFC 5011: changing a key without a flag day
 
 A **flag day** is a moment when everybody must switch at once. RFC 5011 avoids one.
 
@@ -1015,7 +959,7 @@ stateDiagram-v2
 
 Question to think about: *what happens to a resolver that was switched off for the whole period?* It never saw the new key validated by the old one, so it cannot follow the chain: that is the failure case of the next slide.
 
-### 21.2 What could go wrong
+#### What could go wrong
 
 - A resolver that **misses the update fails closed**: every validated answer breaks.
 - Operators **cannot list which resolvers are ready**.
@@ -1028,9 +972,7 @@ The failure mode is severe and asymmetric. A resolver holding only the old key, 
 
 **The lesson:** the protocol was correct; RFC 5011 worked. What failed was **observability**: the operators could not see the global state well enough to know whether it was safe to go ahead, so they waited. In the second half of the course you meet systems that must converge **without any participant knowing the global state**.
 
----
-
-## 22. Sweden as an outlier
+### 4.6 Sweden as an outlier
 
 - Scandinavian validation rates are **among the highest measured anywhere**.
 - Global validation is near a third of queries.
@@ -1046,9 +988,7 @@ Nothing technical explains Sweden's high rate: the same software and standards e
 
 "Who is your resolver right now?" Most people do not know: eduroam, mobile operator or home ISP, and whether their answers are validated differs. The general lesson: deployment of Internet protocols is usually decided by registries, regulators and market structure more than by protocol design. RPKI adoption also varies sharply by region.
 
----
-
-## 23. Encrypting the query: DoT, DoH and DoQ
+### 4.7 Encrypting the query: DoT, DoH and DoQ
 
 | Transport | RFC | Port | Key property |
 |---|---|---|---|
@@ -1062,8 +1002,6 @@ Nothing technical explains Sweden's high rate: the same software and standards e
 - These transports **hide**; they do not sign.
 - A DoH query to an unsigned zone is **confidential and unauthenticated**.
 - A DNSSEC-validated answer over plain UDP is **authenticated and public**.
-
-> **Kid example.** DNSSEC is like a sealed envelope with a wax stamp: anyone can still read what is written on the postcard, but nobody can change it without breaking the stamp. DoT and DoH are like an envelope you cannot see through: nobody on the way can read your question, but the envelope by itself does not prove who wrote the answer. You need both for both properties.
 
 ```mermaid
 quadrantChart
@@ -1080,11 +1018,9 @@ quadrantChart
 
 **DoQ** uses QUIC. With TCP, one lost packet holds up everything behind it on the connection (head-of-line blocking); QUIC avoids this, which matters when one connection carries many queries at the same time.
 
-> **Beyond the slides.** DoQ also uses port 853, but over UDP (QUIC runs on UDP).
+**Additional context.** DoQ also uses port 853, but over UDP (QUIC runs on UDP).
 
----
-
-## 24. Who are you hiding from?
+### 4.8 Who are you hiding from?
 
 - Encrypting resolver traffic hides queries **from the network path**.
 - It does **not** hide them **from the resolver**, which now sees more, from more users.
@@ -1093,7 +1029,7 @@ quadrantChart
 
 Encryption protects the query in transit. It does nothing at the endpoint: the resolver must read every name you look up in order to answer it. So the real question is not "is my DNS private?" but **"who am I choosing to trust?"**. Before DoH, that was usually your ISP: legally constrained, local, often uninterested. After DoH, browsers and operating systems began to default to a few large public resolvers: better resourced, often with better privacy policies, but **vastly larger in total**. The data concentrated, not through malice or bad design, but because of **where the encryption ends**. (This is a discussion slide; it has no clean answer.)
 
-### Minimising what anyone learns
+#### Minimising what anyone learns
 
 A different strategy: rather than encrypting the channel, **give each party less in the first place**.
 
@@ -1129,11 +1065,11 @@ Neither the relay nor the target alone can link the user to the query.
 
 **The principle:** encrypting a channel protects data from third parties but leaves the endpoint fully informed. **Minimisation protects data from the endpoint too.** It survives a compromised or merely curious resolver, which encryption does not. "Which would you rather have if you distrusted your resolver?"
 
-> **Beyond the slides.** Oblivious DoH is specified in RFC 9230 (an experimental RFC from 2022).
+**Additional context.** Oblivious DoH is specified in RFC 9230 (an experimental RFC from 2022).
 
----
+## 5. Resilience and failure
 
-## 25. Anycast and root resilience
+### 5.1 Anycast and root resilience
 
 - **Thirteen root server identities; over a thousand physical instances.**
 - **BGP anycast:** many sites announce the same prefix; routing picks the nearest.
@@ -1143,8 +1079,6 @@ Neither the relay nor the target alone can link the user to the query.
 **Clear up the myth:** there are **not** thirteen root servers. There are thirteen root server **identities**, named A to M, because thirteen addresses was what fitted in a 512-byte UDP response in 1987. Behind those thirteen names are well over a thousand machines worldwide.
 
 **How:** many sites announce the same IP prefix into BGP from different places. Ordinary routing delivers each query to the instance closest in BGP terms. No DNS mechanism is involved: the resolver believes it is talking to one server.
-
-> **Kid example.** Anycast is like a chain of shops that all use the same phone number: your call goes to the nearest shop. If one shop burns down, the phone company simply sends the calls to the next nearest shop, and callers never notice.
 
 ```mermaid
 flowchart LR
@@ -1162,9 +1096,7 @@ The dotted arrow shows what happens when the Stockholm instance fails: it withdr
 
 Links made in the lecture: anycast as an IP-layer mechanism belongs to the IPv6 lecture; this is BGP (whose problems filled the routing lecture) used deliberately for fault tolerance; and anycast is also load balancing, an idea that returns as consistent hashing. This is "the one place in the lecture where DNS handles failure well — and it does so by delegating the problem to a different layer."
 
----
-
-## 26. How DNS fails
+### 5.2 How DNS fails
 
 - **Stale delegation:** the parent points somewhere the child no longer is.
 - **Expired signatures:** valid data rejected because time moved on.
@@ -1181,11 +1113,11 @@ Links made in the lecture: anycast as an IP-layer mechanism belongs to the IPv6 
 
 **The hand-over to the second half of the course:** "That is now the fifth time. BGP wedgies converged to a state nobody wanted. IPv6 hides its own breakage. TCP settles into equilibria nobody chose. SDN cannot bootstrap in-band control after a fault. And DNS cannot tell that it is lying. Every one is a deployed system, locally correct, that can reach a bad state and cannot leave it unaided. The rest of this course is about systems that can." That is exactly what **self-stabilization** means: a system that returns to correct behaviour from **any** state, without outside help.
 
----
+## 6. Practice and review
 
-## 27. Exam skill: reading dig output
+### 6.1 Exam skill: reading dig output
 
-> **Beyond the slides.** Old exams (2012–2015, October 2017, November 2018) ask you to read `dig` output. The 2026 exam pattern makes a long written question unlikely, but the facts behind it appear in multiple-choice questions. The output below is an **illustration**: the layout follows a real `dig` reply, but the addresses are made-up documentation addresses (192.0.2.x).
+**Additional context.** Old exams (2012–2015, October 2017, November 2018) ask you to read `dig` output. The 2026 exam pattern makes a long written question unlikely, but the facts behind it appear in multiple-choice questions. The output below is an **illustration**: the layout follows a real `dig` reply, but the addresses are made-up documentation addresses (192.0.2.x).
 
 ```
 $ dig www.chalmers.se @a.ns.se
@@ -1219,11 +1151,9 @@ How to read it, step by step:
 
 A useful rule from the 2018 exam guide: **"No answer + authority section + additional A records" means a referral with glue.** And when you ask `dig ns se.` the answer section already lists the NS records, so the authority section is empty: there is nothing new to put there.
 
----
+### 6.2 Related quiz topics not in the lecture
 
-## 28. Related quiz topics not in the lecture
-
-> **Beyond the slides.** The course's pre-lecture DNS quiz (31 questions) asks about a few things that the lecture does not cover directly. Short explanations:
+**Additional context.** The course's pre-lecture DNS quiz (31 questions) asks about a few things that the lecture does not cover directly. Short explanations:
 
 - **Stub resolver.** The small DNS client in your laptop or app. It does no searching itself; it sends one recursive query (RD = 1) to the recursive resolver and waits.
 - **TTL trade-off.** A **long TTL** means faster lookups and less load on servers, but a change (new IP address) takes longer to reach everyone. A **short TTL** means changes spread quickly, but more queries. When the TTL expires, the resolver throws the record away and asks again.
@@ -1232,5 +1162,14 @@ A useful rule from the 2018 exam guide: **"No answer + authority section + addit
 - **DNS redirection vs HTTP redirection.** DNS redirection simply gives a different IP address for the same name; the user does not see it and the URL in the browser stays the same. HTTP redirection happens after you connect: the web server answers "go to this other URL" (status 301 or 302), and the browser's address bar changes.
 - **Dynamic DNS (DDNS) with DHCP.** When DHCP gives a device a new IP address, the device's DNS record is updated automatically, so its name keeps pointing at its current address.
 - **Amplification attack.** The attacker sends a small query to an open resolver, with the **victim's** address forged as the source. The resolver sends a much larger reply to the victim. Small in, big out: many resolvers together can flood the victim. (It works because DNS over UDP does not check the source address.)
-- **Public resolvers and privacy.** A public resolver like 8.8.8.8 sees every name you look up, so it could log and profile you. Encryption (DoT/DoH) hides queries from the network, not from the resolver ([section 24](#24-who-are-you-hiding-from)).
+- **Public resolvers and privacy.** A public resolver like 8.8.8.8 sees every name you look up, so it could log and profile you. Encryption (DoT/DoH) hides queries from the network, not from the resolver ([section 4.8](#48-who-are-you-hiding-from)).
 - **Exam-style summary of the design.** The property that gives DNS both fault tolerance and administrative scalability is **hierarchical delegation of zones combined with replication on several authoritative servers** (a 2023–2025 multiple-choice question).
+
+## Revision notes and references
+
+Technical clarifications, where the lecture material is corrected or made precise, appear in sections [1.2](#12-before-dns-the-hoststxt-file), [2.2](#22-how-one-lookup-travels-recursive-and-non-recursive-queries), [2.3](#23-the-dns-protocol-port-53-udp-and-tcp), [3.1](#31-resource-records), [3.9](#39-srv-and-txt-records). Where the slides and the course book differ, this guide follows the book and says so at that point.
+
+- [RFC 1034](https://www.rfc-editor.org/rfc/rfc1034) and [RFC 1035](https://www.rfc-editor.org/rfc/rfc1035): DNS concepts, records and message format.
+- [RFC 2782 — SRV records](https://www.rfc-editor.org/rfc/rfc2782): service location records.
+- [RFC 4033 — DNSSEC introduction and requirements](https://www.rfc-editor.org/rfc/rfc4033) and [RFC 5011 — automated updates of DNSSEC trust anchors](https://www.rfc-editor.org/rfc/rfc5011): the chain of trust and trust-anchor rollover.
+- [RFC 7858 — DNS over TLS](https://www.rfc-editor.org/rfc/rfc7858), [RFC 8484 — DNS over HTTPS](https://www.rfc-editor.org/rfc/rfc8484) and [RFC 9250 — DNS over QUIC](https://www.rfc-editor.org/rfc/rfc9250): encrypted transports for DNS queries.

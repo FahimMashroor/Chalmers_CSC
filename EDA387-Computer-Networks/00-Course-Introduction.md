@@ -2,17 +2,17 @@
 
 **Course:** EDA387/DIT660 Computer Networks (Chalmers), introductory lecture by Elad Michael Schiller.
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. *This lecture has no hidden slides, so nothing in this guide carries the † mark.*
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context that is not in the lecture itself (general knowledge or the course book). **Kid example** retells an idea with an everyday picture. Everything else follows the lecture.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | AGC | Apollo Guidance Computer | The small on-board computer that steered the Apollo spacecraft, including the Moon landing. |
 | ARPANET | Advanced Research Projects Agency Network | The research network from the late 1960s that grew into today's Internet. |
@@ -37,30 +37,23 @@
 | Transient fault | — | A short-lived fault that corrupts the state of the system and then goes away. |
 | Unforeseen failure | — | A rare failure (or combination of failures) that nobody predicted, so it cannot be written into a specification or easily caught in testing. |
 
----
+## Contents
 
-## Table of contents
+- [1. Why networks must be dependable](#1-why-networks-must-be-dependable)
+  - [1.1 The problem: systems that crash](#11-the-problem-systems-that-crash)
+  - [1.2 Three kinds of trouble](#12-three-kinds-of-trouble)
+  - [1.3 The Apollo 11 landing: a story of unforeseen failures](#13-the-apollo-11-landing-a-story-of-unforeseen-failures)
+- [2. Recovering from failures](#2-recovering-from-failures)
+  - [2.1 Restart on failure](#21-restart-on-failure)
+  - [2.2 Self-stabilizing networks](#22-self-stabilizing-networks)
+- [3. About the course](#3-about-the-course)
+  - [3.1 About the course](#31-about-the-course)
+  - [3.2 Recommended videos](#32-recommended-videos)
+- [Revision notes and references](#revision-notes-and-references)
 
-1. [The problem: systems that crash](#1-the-problem-systems-that-crash)
-2. [Three kinds of trouble](#2-three-kinds-of-trouble)
-3. [The Apollo 11 landing: a story of unforeseen failures](#3-the-apollo-11-landing-a-story-of-unforeseen-failures)
-4. [Restart on failure](#4-restart-on-failure)
-5. [Self-stabilizing networks](#5-self-stabilizing-networks)
-   - [5.1 The network model used in the course](#51-the-network-model-used-in-the-course)
-   - [5.2 What self-stabilizing means](#52-what-self-stabilizing-means)
-   - [5.3 The self-stabilizing Internet: Radia Perlman and later work](#53-the-self-stabilizing-internet-radia-perlman-and-later-work)
-6. [About the course](#6-about-the-course)
-   - [6.1 Aim and prerequisites](#61-aim-and-prerequisites)
-   - [6.2 Expected outcomes](#62-expected-outcomes)
-   - [6.3 Content, labs and lecture plan](#63-content-labs-and-lecture-plan)
-   - [6.4 Examination and the safety net](#64-examination-and-the-safety-net)
-   - [6.5 Attendance, quizzes, literature and honesty](#65-attendance-quizzes-literature-and-honesty)
-   - [6.6 Tips and next steps](#66-tips-and-next-steps)
-7. [Recommended videos](#7-recommended-videos)
+## 1. Why networks must be dependable
 
----
-
-## 1. The problem: systems that crash
+### 1.1 The problem: systems that crash
 
 The lecture opens with a familiar scene: a computer shows the Windows "blue screen of death", restarts, the user logs in again, tries to open PowerPoint, and the computer crashes again. Everybody has lived through something like this, and it shows the main message of the course in one picture: **we need far more dependable computer networks and distributed systems.**
 
@@ -68,7 +61,7 @@ The goal is not only to avoid crashes. The lecture argues for networks with **au
 
 This may sound like asking for "the moon and back". But people did go to the Moon and come back, and the computer that helped them is a perfect example of automated resilience.
 
-## 2. Three kinds of trouble
+### 1.2 Three kinds of trouble
 
 The lecture separates three kinds of trouble a system can meet. Think of a school bus:
 
@@ -86,7 +79,7 @@ flowchart TB
 
 This course is mainly about the third kind: **unforeseen transient failures**, and how a system can recover from them automatically.
 
-## 3. The Apollo 11 landing: a story of unforeseen failures
+### 1.3 The Apollo 11 landing: a story of unforeseen failures
 
 The Apollo spacecraft carried three astronauts (Neil Armstrong, Buzz Aldrin and Michael Collins) and one more important "crew member": the **Apollo Guidance Computer (AGC)**. The AGC had to steer the spacecraft along a difficult route using complicated calculations.
 
@@ -99,8 +92,6 @@ All computer systems meet failures sooner or later. In a spacecraft you cannot c
 5. After recovering, the pilot asked for the debug display again, so the computer **restarted again** and recovered again.
 6. The pilot understood that he should stop asking for debug information. The computer then behaved correctly, and **the landing was successful.**
 
-> **Kid example.** A juggler can keep 8 balls in the air. Somebody throws in a 9th ball by accident (the broken radar), and the juggler just about copes. Then a friend shouts "show me a trick too!" (the debug display), and everything falls down. The juggler picks up the balls and starts again, but the friend shouts again and down they go again. Only when the friend stops shouting does the show go on. No single ball was the problem; the combination was.
-
 ```mermaid
 flowchart TD
     A["Landing calculations<br/>80% load"] --> B["+ radar hardware failure<br/>95% load"]
@@ -112,9 +103,11 @@ flowchart TD
 
 **Why this matters.** No single problem caused the trouble. It was a **transient combination of failures**: a broken radar *plus* a user request. The restart itself switched off the debug display, so the system got back to normal once the pilot stopped asking. The radar fault on its own was a **persistent** failure that, according to the lecture, should have been found during system testing; it was the user's request that pushed the system over the limit.
 
-> **Beyond the slides.** Historical accounts of Apollo 11 remember this moment through the computer's "1201" and "1202" program alarms, which meant the computer was overloaded and was restarting its work. The lecture tells the story through the load numbers above, which is all you need for the course.
+**Additional context.** Historical accounts of Apollo 11 remember this moment through the computer's "1201" and "1202" program alarms, which meant the computer was overloaded and was restarting its work. The lecture tells the story through the load numbers above, which is all you need for the course.
 
-## 4. Restart on failure
+## 2. Recovering from failures
+
+### 2.1 Restart on failure
 
 A common remedy is **restart on failure**. The idea: **software that has failed cannot be trusted to repair itself, so restart it instead.**
 
@@ -125,17 +118,15 @@ Restarts can be organized in levels, from small to big. A smaller restart distur
 3. Restart the software, but **keep critical state information**, for example by using **checkpoints** (saved copies of the important data).
 4. Restart the hardware: a completely **"fresh start"**.
 
-> **Kid example.** When a game on a tablet freezes, you first close just that game (restart the job). If that does not help, you restart the tablet but your saved games are kept (restart with checkpoints). As a last step you reset the whole tablet to factory settings (a fresh start). Each bigger step fixes more but loses more.
-
 Restarting has a danger: a **restart loop**. Apollo 11 went into a loop of restarts, because after each restart the same combination of problems came back (the broken radar plus the pilot's debug request). The loop ended only because the combination was **transient**: once the pilot stopped asking, the system returned to normal.
 
 The lecture uses this to state the focus of the course: **unforeseen transient failures and automated resilience.**
 
-## 5. Self-stabilizing networks
+### 2.2 Self-stabilizing networks
 
 The course gives strong guarantees against such failures by using the design criterion of **self-stabilization**: **a self-stabilizing network recovers after the last transient fault has happened.** No matter how badly the faults scrambled the state, once they stop, the network finds its way back to correct behaviour by itself.
 
-### 5.1 The network model used in the course
+#### The network model used in the course
 
 The course looks at a computer network as an **asynchronous message-passing system**:
 
@@ -146,7 +137,7 @@ The course looks at a computer network as an **asynchronous message-passing syst
 
 Recovery after transient faults must happen **even while** these communication failures and node crashes keep happening.
 
-### 5.2 What self-stabilizing means
+#### What self-stabilizing means
 
 **A self-stabilizing network can be started in any state and will eventually show the desired "legal" behaviour.**
 
@@ -172,7 +163,7 @@ flowchart LR
 
 The arrows are steps of the system, so they point in the direction time moves. The details of configurations, steps and safe configurations are taught in the Analytical Framework lecture.
 
-### 5.3 The self-stabilizing Internet: Radia Perlman and later work
+#### The self-stabilizing Internet: Radia Perlman and later work
 
 Self-stabilization is not only theory. **Radia Perlman's pioneering work envisioned a self-stabilizing Internet:**
 
@@ -190,11 +181,13 @@ Other contributions to the field listed in the lecture:
 
 After a long process of trial and error, the Internet core can be seen as **"conceptually self-stabilizing"**, because it can (sometimes informally) cope with faults that were not foreseen when it was designed.
 
-> **Note on the source.** One part of the lecture summarizes Perlman's work as making "distance vector and link-state" protocols robust, while the lecture's explanation mentions only link-state protocols. Both are listed above.
+**Technical clarification.** One part of the lecture summarizes Perlman's work as making "distance vector and link-state" protocols robust, while the lecture's explanation mentions only link-state protocols. Both are listed above.
 
-## 6. About the course
+## 3. About the course
 
-### 6.1 Aim and prerequisites
+### 3.1 About the course
+
+#### Aim and prerequisites
 
 Computer networks cover several sub-specialties. This course combines three of them: **self-stabilizing algorithms for computer networks**, **programming with the BSD socket API**, and **communication concepts and protocols**. Mastering computer networks means both **theory and practice**: designing, implementing and using network protocols and services.
 
@@ -207,7 +200,7 @@ The aims are:
 
 **Prerequisites:** a Bachelor's degree or equivalent, at least one programming course, and 7.5 hp (or equivalent) in one of these five areas: computer communication (DIT420/EDA343), operating systems, algorithms and/or data structures, programming in C or C++, or discrete mathematics.
 
-### 6.2 Expected outcomes
+#### Expected outcomes
 
 **Knowledge and understanding**
 
@@ -228,7 +221,7 @@ The aims are:
 
 - Describe, design and analyse existing and new algorithms for network protocols, with a very strong emphasis on **self-stabilizing algorithms**.
 
-### 6.3 Content, labs and lecture plan
+#### Content, labs and lecture plan
 
 Hands-on experiments and analysis are central because they connect the concepts to real-world problems.
 
@@ -254,7 +247,7 @@ The 2026 week plan from the lecture:
 | 42 | Algorithms | Summary | Reserved |
 | 43 | Reserved | Reserved | No class |
 
-### 6.4 Examination and the safety net
+#### Examination and the safety net
 
 **To pass the course** you must:
 
@@ -277,7 +270,7 @@ All labs and home assignments are mandatory, apart from specific exceptions list
 
 The course web page has the full conditions.
 
-### 6.5 Attendance, quizzes, literature and honesty
+#### Attendance, quizzes, literature and honesty
 
 **Attendance questions.** In the first two minutes of each lecture hour there is a short, easy question. You need a passcode, which the lecturer gives at the start of the lecture; keep it private. Unlimited attempts are allowed. If something goes wrong, tell the lecturer immediately and write your name on the paper attendance list. **The exam safety net needs at least 80 % of the total points from these questions.**
 
@@ -299,7 +292,7 @@ The course web page has the full conditions.
 - Avoid using AI and large language models (for example ChatGPT) when writing assignments and labs.
 - The examiner must report all suspected violations; it is not a matter of choice.
 
-### 6.6 Tips and next steps
+#### Tips and next steps
 
 Tips from earlier students:
 
@@ -311,7 +304,7 @@ Tips from earlier students:
 
 What to do next: log in to Canvas (contact the student centre if you cannot), email the lecturer at elad@chalmers.se if you cannot see the course page, and look through the learning materials.
 
-## 7. Recommended videos
+### 3.2 Recommended videos
 
 Watch:
 
@@ -325,3 +318,9 @@ Optional:
 - 40 years of the Internet: <http://www.youtube.com/watch?v=eZSPWDMn730>
 - The Internet in 1969: <http://www.youtube.com/watch?v=Y0pPfyYtiBc>
 - Also linked from the opening slide: <https://www.youtube.com/watch?v=9hIQjrMHTv4>
+
+## Revision notes and references
+
+Technical clarifications, where the lecture material is corrected or made precise, appear in sections [2.2](#22-self-stabilizing-networks). Where the slides and the course book differ, this guide follows the book and says so at that point.
+
+- S. Dolev, *Self-Stabilization*, MIT Press, 2000: the course book for the self-stabilization part.

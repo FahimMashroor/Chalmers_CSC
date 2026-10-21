@@ -2,17 +2,17 @@
 
 **Course:** EDA387/DIT663 Computer Networks, part 2 (Fault-tolerant Algorithms for Computer Networks), lecture "Self-stabilizing Leader Election for ID-based Systems", first part (Dolev, *Self-Stabilization*, §2.9: convergence stairs). The second part of the same lecture, leader election in complete graphs without identifiers, has its own guide.
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. *This part of the lecture has no hidden slides, so nothing in this guide carries the † mark.*
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context from the course book (Dolev), from the course's own pre-lecture quiz, or a short check of reasoning that the lecture leaves implicit. **Everyday example** and **Kid example** retell an idea with an everyday picture. Everything else follows the lecture.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | Attractor | — | Another name for a predicate *Aᵢ* in a convergence-stairs proof: once the system reaches it, it stays in it. |
 | Candidate | — | The leader that processor *pᵢ* currently believes in, together with its distance to it. |
@@ -33,25 +33,25 @@
 | Refinement | — | *A*ᵢ₊₁ refines *Aᵢ* if *Aᵢ* holds whenever *A*ᵢ₊₁ holds: *A*ᵢ₊₁ is the stronger statement. |
 | Safe configuration | — | A configuration from which every fair execution is legal. |
 
----
+## Contents
 
-## Table of contents
+- [1. Leader election and convergence stairs](#1-leader-election-and-convergence-stairs)
+  - [1.1 Why leader election?](#11-why-leader-election)
+  - [1.2 Proof technique: convergence stairs](#12-proof-technique-convergence-stairs)
+- [2. The task and the algorithm](#2-the-task-and-the-algorithm)
+  - [2.1 The task and the assumptions](#21-the-task-and-the-assumptions)
+  - [2.2 Why the naive algorithm is not self-stabilizing: floating identifiers](#22-why-the-naive-algorithm-is-not-self-stabilizing-floating-identifiers)
+  - [2.3 The self-stabilizing algorithm](#23-the-self-stabilizing-algorithm)
+- [3. Correctness and a worked example](#3-correctness-and-a-worked-example)
+  - [3.1 Correctness with two convergence stairs](#31-correctness-with-two-convergence-stairs)
+  - [3.2 A complete worked example](#32-a-complete-worked-example)
+- [4. Summary](#4-summary)
+  - [4.1 Recap](#41-recap)
+- [Revision notes and references](#revision-notes-and-references)
 
-1. [Why leader election?](#1-why-leader-election)
-2. [Proof technique: convergence stairs](#2-proof-technique-convergence-stairs)
-3. [The task and the assumptions](#3-the-task-and-the-assumptions)
-4. [Why the naive algorithm is not self-stabilizing: floating identifiers](#4-why-the-naive-algorithm-is-not-self-stabilizing-floating-identifiers)
-5. [The self-stabilizing algorithm](#5-the-self-stabilizing-algorithm)
-6. [Correctness with two convergence stairs](#6-correctness-with-two-convergence-stairs)
-    - [6.1 The two stairs](#61-the-two-stairs)
-    - [6.2 Stair 1: Lemma 2.5, floating identifiers disappear](#62-stair-1-lemma-25-floating-identifiers-disappear)
-    - [6.3 Stair 2: Theorem 2.3, the minimum identifier wins](#63-stair-2-theorem-23-the-minimum-identifier-wins)
-7. [A complete worked example](#7-a-complete-worked-example)
-8. [Recap](#8-recap)
+## 1. Leader election and convergence stairs
 
----
-
-## 1. Why leader election?
+### 1.1 Why leader election?
 
 Many distributed tasks become simple once one node is chosen as a leader that can coordinate the others. Leader election is used for:
 
@@ -65,9 +65,7 @@ Many distributed tasks become simple once one node is chosen as a leader that ca
 - **Decentralized systems:** in peer-to-peer and blockchain networks, consensus algorithms decide who may create new blocks or validate transactions.
 - **Resource allocation:** choosing the node that allocates limited resources fairly and efficiently.
 
-*Everyday example:* a class that must pick one class representative. Once every pupil knows who the representative is, questions to the teacher can go through that one person.
-
-## 2. Proof technique: convergence stairs
+### 1.2 Proof technique: convergence stairs
 
 The **convergence stairs** technique proves that a self-stabilizing algorithm converges by climbing a staircase of predicates *A*₁, *A*₂, …, *Aₖ* (*k* > 1):
 
@@ -89,16 +87,16 @@ flowchart LR
     D --> S4["cm → cm+1"] --> Ak["Ak holds:<br/>c_safe"]
 ```
 
-*Everyday example:* climbing stairs. You first prove you can reach the first step and never fall below it; then that from the first step you can reach the second and never fall below it; and so on to the top floor, which is "safe".
+## 2. The task and the algorithm
 
-## 3. The task and the assumptions
+### 2.1 The task and the assumptions
 
 - Every processor has a **unique identifier in the range 1 to *N***, where *N* is an upper bound on the number of processors in the system.
 - **The leader election task** is to **inform every processor of the identifier of a single processor in the system**; that single processor, with the elected identifier, is the **leader**. Here the processor with the **minimum identifier** is elected.
 
-> **Beyond the slides (Dolev §2.9):** usually the processor with the minimal (or maximal) identifier is elected. Leader election is a fundamental task because a distributed task can often be performed by electing a leader and then letting it compute centrally.
+**Additional context (Dolev §2.9).** usually the processor with the minimal (or maximal) identifier is elected. Leader election is a fundamental task because a distributed task can often be performed by electing a leader and then letting it compute centrally.
 
-## 4. Why the naive algorithm is not self-stabilizing: floating identifiers
+### 2.2 Why the naive algorithm is not self-stabilizing: floating identifiers
 
 A simple non-stabilizing algorithm: each processor starts with itself as candidate, repeatedly tells its neighbours its candidate, and switches to any smaller candidate it hears about. In a clean start this elects the minimum identifier.
 
@@ -122,7 +120,7 @@ flowchart TB
 
 With the naive rule "switch to the smallest candidate you hear", 0 is smaller than every real identifier, so **every processor keeps declaring 0 as the leader forever**, and the system never elects a real processor.
 
-## 5. The self-stabilizing algorithm
+### 2.3 The self-stabilizing algorithm
 
 The fix uses **distance variables and the bound *N*** to eliminate floating identifiers. Each processor *pᵢ* publishes a pair ⟨leaderᵢ, disᵢ⟩: its candidate and its distance from that candidate. Each processor reads its neighbours' pairs and chooses the candidate with the **lexicographically lowest pair of identifier and distance**, but **ignores any pair whose distance has reached *N***.
 
@@ -147,8 +145,6 @@ In words, in every iteration *pᵢ*:
 3. **Adopts a neighbour's candidate** if that neighbour's distance is **less than *N*** and its candidate is **smaller**, or **equal with a shorter distance** (lines 06–07). It then sets its distance to the neighbour's distance **plus one** (line 08).
 4. **Publishes** the chosen pair (line 10).
 
-> **Kid example.** Every morning each child forgets yesterday's answer and starts again with "I am the leader, 0 steps away". Then the child asks the neighbours "who is your leader, and how many steps away?" and keeps the smallest name it hears, adding one step. A made-up name (a floating identifier) gets one step further away every time it is passed on, and once its step count reaches N (more steps than there are children), everyone ignores it.
-
 ```mermaid
 flowchart TD
     S(["Start iteration"]) --> I["candidate, distance := ID(i), 0"]
@@ -166,11 +162,11 @@ flowchart TD
 
 Why does the distance help? A real leader keeps publishing itself at distance 0, so its identifier is refreshed at small distances forever. A floating identifier has **no real source**: nobody publishes it at distance 0, so every time it is copied, its distance **grows by one**. Once its distance reaches *N* everybody ignores it.
 
-*Everyday example:* a rumour "the class representative is Zed", but there is no pupil called Zed. Each time the rumour is passed on, it gets a "heard it from someone who heard it from…" counter. If the counter is higher than the number of pupils in the school, the rumour cannot be true, so people stop believing it. A real representative keeps announcing themself, so their counter is always fresh.
+## 3. Correctness and a worked example
 
-## 6. Correctness with two convergence stairs
+### 3.1 Correctness with two convergence stairs
 
-### 6.1 The two stairs
+#### The two stairs
 
 - ***A*₁: no floating identifier exists.**
 - ***A*₂ (safe configuration): every processor chooses the minimum identifier of a processor in the system as the identifier of the leader.**
@@ -179,9 +175,9 @@ Why does the distance help? A real leader keeps publishing itself at distance 0,
 
 **Where can a floating identifier hide?** In processor *pᵢ*'s local array leaderᵢ[1, …, δ], in its local variable candidate, and in the field leaderᵢ of its communication register. The **distance** of a floating identifier found in leaderᵢ[*j*], candidate or leaderᵢ is disᵢ[*j*], distance or disᵢ, respectively.
 
-### 6.2 Stair 1: Lemma 2.5, floating identifiers disappear
+#### Stair 1: Lemma 2.5, floating identifiers disappear
 
-> **Lemma 2.5.** Every fair execution that starts from any arbitrary configuration has a suffix in which no floating identifier exists.
+**Lemma 2.5.** Every fair execution that starts from any arbitrary configuration has a suffix in which no floating identifier exists.
 
 *Proof.* We show that **as long as a floating identifier exists, the minimal distance of a floating identifier increases during any O(Δ) rounds** (O(Δ) rounds are enough for every processor to complete a full iteration of the loop, reading all of its at most Δ neighbours).
 
@@ -193,7 +189,7 @@ Why does the distance help? A real leader keeps publishing itself at distance 0,
 
 The lecture's informal version: let floatIdMin be the smallest of all floating identifiers. Its distance increases within every asynchronous cycle (an induction on the distance of *pᵢ* from where floatIdMin is held). Eventually the condition in line 06 makes everybody ignore floatIdMin.
 
-### 6.3 Stair 2: Theorem 2.3, the minimum identifier wins
+#### Stair 2: Theorem 2.3, the minimum identifier wins
 
 After stair *A*₁, **only correct identifiers exist**, so the minimum identifier can be chosen correctly. From that point on, the argument is the same as for the BFS spanning tree learnt earlier in the course:
 
@@ -201,7 +197,7 @@ After stair *A*₁, **only correct identifiers exist**, so the minimum identifie
 - **The minimum identifier propagates.** The proof is by induction on the distance of *pᵢ* from the processor with the minimum identifier: processors at distance 1 adopt it with distance 1, then processors at distance 2 adopt it with distance 2, and so on, exactly like the distances in the BFS tree algorithm.
 - If all processors already hold the minimum identifier, the remaining argument (correct distances) is the same as in the BFS tree construction proof.
 
-> **Theorem 2.3.** Every fair execution that starts from an arbitrary configuration reaches a safe configuration.
+**Theorem 2.3.** Every fair execution that starts from an arbitrary configuration reaches a safe configuration.
 
 **Why the first stair is essential.** If *A*₁ did not hold, we could not prove correctness: the minimum identifier *z* present in the first (arbitrary) configuration might not be the identifier of any processor in the system, and the naive argument would elect the ghost *z*.
 
@@ -211,11 +207,11 @@ flowchart LR
     A1 -- "minimum real ID spreads<br/>hop by hop, like BFS<br/>(Theorem 2.3)" --> A2["A2: everyone's leader is the<br/>minimum ID (safe)"]
 ```
 
-> **Beyond the slides (reasoning):** the algorithm also computes BFS distances from the leader for free: each processor's distance converges to its real hop distance from the minimum-identifier processor, as in the worked example below.
+**Additional context (reasoning).** the algorithm also computes BFS distances from the leader for free: each processor's distance converges to its real hop distance from the minimum-identifier processor, as in the worked example below.
 
-## 7. A complete worked example
+### 3.2 A complete worked example
 
-Take the floating-identifier example from Section 4 with *N* = 8: every register starts as ⟨0, 0⟩. To keep it short, suppose every processor reads all its neighbours and then writes, all in the same round (this is one particular fair schedule). Each line shows ⟨leader, dis⟩ for processors 1 to 8 after that round.
+Take the floating-identifier example from Section 2.2 with *N* = 8: every register starts as ⟨0, 0⟩. To keep it short, suppose every processor reads all its neighbours and then writes, all in the same round (this is one particular fair schedule). Each line shows ⟨leader, dis⟩ for processors 1 to 8 after that round.
 
 | Round | *p*₁ | *p*₂ | *p*₃ | *p*₄ | *p*₅ | *p*₆ | *p*₇ | *p*₈ |
 |---|---|---|---|---|---|---|---|---|
@@ -235,9 +231,17 @@ What happens:
 - **Round 9.** All distances are 8 = *N*, so the test dis < *N* fails everywhere and every processor falls back to itself. *A*₁ now holds: no floating identifier exists.
 - **Rounds 10–12 (stair 2).** The real minimum identifier 1 spreads hop by hop. Processors 5, 6 and 8 (neighbours of 1) get distance 1; processors 2, 3 and 7 get distance 2; processor 4 gets distance 3. From round 12 on nothing changes: this is a safe configuration, and the distances are exactly the hop distances from processor 1.
 
-## 8. Recap
+## 4. Summary
+
+### 4.1 Recap
 
 - **Convergence stairs:** prove the system reaches and stays in *A*₁, then in the stronger *A*₂, …, up to *Aₖ* = safe.
 - **Leader election in ID-based general graphs:** unique identifiers in 1 to *N*; every processor must learn the identifier of one leader (the minimum).
 - **Floating identifiers** (ghost identifiers from the arbitrary start) break the naive algorithm. The fix: publish ⟨candidate, distance⟩, add one to the distance when copying, and **ignore any pair with distance ≥ *N***.
 - **Proof:** stair *A*₁ (Lemma 2.5): the minimum distance of a floating identifier grows every O(Δ) rounds until it reaches *N*, so floating identifiers vanish. Stair *A*₂ (Theorem 2.3): the minimum real identifier then spreads like a BFS tree, giving a safe configuration.
+
+## Revision notes and references
+
+This guide found no errors in the lecture material that needed a technical clarification. Where the slides and the course book differ in presentation, this guide follows the lecture and notes the book's version.
+
+- S. Dolev, *Self-Stabilization*, MIT Press, 2000: §2.9 (convergence stairs and leader election in ID-based systems).

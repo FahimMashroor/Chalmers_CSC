@@ -2,17 +2,17 @@
 
 **Course:** EDA387/DIT663 Computer Networks, part 2 (Fault-tolerant Algorithms for Computer Networks), lecture "Dijkstra's algorithm" (Dolev, *Self-Stabilization*, §2.6)
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
-**† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. In this lecture only one slide is hidden: the definition of legal behaviour for mutual exclusion in [Section 3.2](#32-legal-behaviour-of-mutual-exclusion-).
+**† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. In this lecture only one slide is hidden: the definition of legal behaviour for mutual exclusion in [Section 2.1](#legal-behaviour-of-mutual-exclusion-).
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context from the course book (Dolev) or from the course's own pre-lecture quiz. **Everyday example** and **Kid example** retell an idea with an everyday picture. Everything else follows the lecture.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | Asynchronous cycle | — | The shortest stretch of an execution in which every processor completes at least one full iteration of its do-forever loop. |
 | Asynchronous round | — | The shortest stretch of an execution in which every processor takes at least one step. |
@@ -36,28 +36,25 @@
 | Token | Privilege | The right to access the shared medium. In Dijkstra's algorithm a processor "holds the token" when its if-condition is true. |
 | Token ring | — | A LAN in which stations are arranged in a logical ring and a control token travels around the ring to decide who may transmit. |
 
----
+## Contents
 
-## Table of contents
+- [1. Background](#1-background)
+  - [1.1 Goal of the lecture](#11-goal-of-the-lecture)
+  - [1.2 Background: Dijkstra's 1974 paper and token ring LANs](#12-background-dijkstras-1974-paper-and-token-ring-lans)
+- [2. Mutual exclusion and Dijkstra's algorithm](#2-mutual-exclusion-and-dijkstras-algorithm)
+  - [2.1 The task: mutual exclusion on a ring](#21-the-task-mutual-exclusion-on-a-ring)
+  - [2.2 Dijkstra's algorithm](#22-dijkstras-algorithm)
+  - [2.3 Who holds the token? Counting tokens](#23-who-holds-the-token-counting-tokens)
+- [3. Correctness and a worked example](#3-correctness-and-a-worked-example)
+  - [3.1 Proof of self-stabilization](#31-proof-of-self-stabilization)
+  - [3.2 A complete worked example](#32-a-complete-worked-example)
+- [4. Summary](#4-summary)
+  - [4.1 Recap](#41-recap)
+- [Revision notes and references](#revision-notes-and-references)
 
-1. [Goal of the lecture](#1-goal-of-the-lecture)
-2. [Background: Dijkstra's 1974 paper and token ring LANs](#2-background-dijkstras-1974-paper-and-token-ring-lans)
-3. [The task: mutual exclusion on a ring](#3-the-task-mutual-exclusion-on-a-ring)
-    - [3.1 The task ME](#31-the-task-me)
-    - [3.2 Legal behaviour of mutual exclusion †](#32-legal-behaviour-of-mutual-exclusion-)
-4. [Dijkstra's algorithm](#4-dijkstras-algorithm)
-5. [Who holds the token? Counting tokens](#5-who-holds-the-token-counting-tokens)
-6. [Proof of self-stabilization](#6-proof-of-self-stabilization)
-    - [6.1 Lemma 2.2: all-equal configurations are safe](#61-lemma-22-all-equal-configurations-are-safe)
-    - [6.2 The pigeonhole principle and Lemma 2.3: a missing value](#62-the-pigeonhole-principle-and-lemma-23-a-missing-value)
-    - [6.3 Lemma 2.4: the root changes x1 at least once every n rounds](#63-lemma-24-the-root-changes-x1-at-least-once-every-n-rounds)
-    - [6.4 Theorem 2.1: convergence to a safe configuration](#64-theorem-21-convergence-to-a-safe-configuration)
-7. [A complete worked example](#7-a-complete-worked-example)
-8. [Recap](#8-recap)
+## 1. Background
 
----
-
-## 1. Goal of the lecture
+### 1.1 Goal of the lecture
 
 We want to learn how to design self-stabilizing network protocols. After this lecture you should be able to:
 
@@ -65,7 +62,7 @@ We want to learn how to design self-stabilizing network protocols. After this le
 2. **Propose an algorithm** that solves it.
 3. **Argue about the correctness** of the proposal, that is, prove that it is self-stabilizing.
 
-## 2. Background: Dijkstra's 1974 paper and token ring LANs
+### 1.2 Background: Dijkstra's 1974 paper and token ring LANs
 
 The very first self-stabilizing algorithm was published by **Edsger W. Dijkstra** in *Communications of the ACM* in **1974**. Leslie Lamport called it Dijkstra's most brilliant work: "Self-stabilization is a very important concept in fault tolerance" (PODC 1984), and later described it as the **first scientific examination of fault-tolerant systems** (Lamport 2015). Today the field has two books, a yearly conference, and several parts of the Internet have been shown to be self-stabilizing.
 
@@ -84,13 +81,13 @@ flowchart LR
 
 The arrows show the direction in which the token travels.
 
-*Everyday example:* a "talking stick" passed around a circle of children. Only the child holding the stick may speak, and the stick moves to the next child when they are done. The problem Dijkstra solved is: what if, through some glitch, there are suddenly three sticks in the circle, or none? His algorithm makes the circle get back to **exactly one** stick by itself.
+## 2. Mutual exclusion and Dijkstra's algorithm
 
-## 3. The task: mutual exclusion on a ring
+### 2.1 The task: mutual exclusion on a ring
 
 The algorithm must guarantee that **at most one station at a time** may access the medium, and also that **every station can access the medium infinitely often**.
 
-### 3.1 The task ME
+#### The task ME
 
 The network is a **clockwise directed ring** of *n* processors *p*₁, …, *pₙ*. The left neighbour (predecessor) of *pᵢ* is *pᵢ₋₁* for *i* > 1, and the predecessor of *p*₁ is *pₙ*. Processor *p*₁ is the **root**, also called the **distinguished processor**.
 
@@ -105,15 +102,15 @@ The task **ME** is defined by the set of all configuration sequences in which:
 
 **One of the safe configurations** for ME and Dijkstra's algorithm is a configuration in which **all the *x* variables have the same value**.
 
-> **Beyond the slides (Dolev §2.6):** this definition of ME differs from the traditional definition of mutual exclusion, which allows a processor to stay outside the critical section (possibly forever) if it does not want to enter.
+**Additional context (Dolev §2.6).** this definition of ME differs from the traditional definition of mutual exclusion, which allows a processor to stay outside the critical section (possibly forever) if it does not want to enter.
 
-### 3.2 Legal behaviour of mutual exclusion †
+#### Legal behaviour of mutual exclusion †
 
 The set **LE_ME** includes all the executions in which **each processor may access the critical section infinitely often**. Namely, let *pᵢ* be a processor, *E* an execution in LE_ME and *E′* a suffix of *E*; then *pᵢ* may access the critical section infinitely many times in *E′*. Moreover, **while *pᵢ* is accessing the critical section, no other processor may concurrently access that critical section**.
 
-> **Beyond the slides (course quiz):** although this slide is hidden, the pre-lecture quiz asked for exactly this description of LE_ME.
+**Additional context (course quiz).** although this slide is hidden, the pre-lecture quiz asked for exactly this description of LE_ME.
 
-## 4. Dijkstra's algorithm
+### 2.2 Dijkstra's algorithm
 
 Each processor *pᵢ* holds **a single shared variable *xᵢ*** with a value in {0, 1, …, *n*} (so there are *n* + 1 possible values for *n* processors). The code is:
 
@@ -130,8 +127,6 @@ In words:
 
 - **The root changes its state if it is equal to its neighbour.** If *x*₁ equals the value of its predecessor *xₙ*, the root increments *x*₁ modulo *n* + 1.
 - **Every other processor copies its neighbour's state if it is different.** If *xᵢ* differs from its predecessor's value *xᵢ₋₁*, *pᵢ* copies it.
-
-> **Kid example.** Children sit in a circle, each looking at the child on their left. Each child holds up a number card. Rule for ordinary children: "if my card differs from my left neighbour's card, I copy it". Rule for the leader: "if my card is the same as my left neighbour's card, I add one to mine". A child who is allowed to act right now "holds the token". The leader's new number then travels around the circle, child by child, until it comes back to the leader, who adds one again.
 
 **Holding the token.** Whenever the if-condition of line 02 (for the root) or line 05 (for the others) holds, that processor is said to **hold the token**. It **forwards the token clockwise** by executing the then-clause: after the root increments, *x*₁ ≠ *x*₂, so *p*₂ now holds the token; after *pᵢ* copies, *xᵢ₊₁* ≠ *xᵢ*, so *pᵢ₊₁* holds it.
 
@@ -152,9 +147,9 @@ Three properties are worth noticing, because they are typical of self-stabilizin
 - **All variables are bounded** (values 0 to *n*); nothing grows forever.
 - The algorithm is for a **semi-anonymous** system: all processors run the same code except the root.
 
-> **Beyond the slides (Dolev §2.6):** the book assumes a **central daemon**: a scheduler that activates one processor at a time, and the activated processor reads its predecessor's value and updates its own in one step. The central daemon is assumed to be fair, activating every processor infinitely often.
+**Additional context (Dolev §2.6).** the book assumes a **central daemon**: a scheduler that activates one processor at a time, and the activated processor reads its predecessor's value and updates its own in one step. The central daemon is assumed to be fair, activating every processor infinitely often.
 
-## 5. Who holds the token? Counting tokens
+### 2.3 Who holds the token? Counting tokens
 
 Because "can change its state" means "holds the token", you can count the tokens in any configuration by checking each processor's condition:
 
@@ -174,11 +169,11 @@ There are three tokens, so this configuration is **not** legal. Now take (3, 3, 
 
 There is **always at least one token**: if no non-root processor holds a token, then *x*₁ = *x*₂ = … = *xₙ*, so *x*₁ = *xₙ* and the root holds one.
 
-> **Kid example.** Count the tokens like this: walk around the circle and look for every place where the card changes from one child to the next; each ordinary child just after such a change holds a token. If nobody's card changes anywhere, all cards are equal, and then the leader (whose card equals the last child's) holds the token. So there is never a moment with zero tokens.
+**Additional context (course quiz).** quiz questions show coloured rings and ask how many processors can change state; count the colour boundaries as above. The quiz also says there are at least *n*(*n* + 1) different safe configurations. For each of the *n* + 1 values *y* there are *n* legitimate configurations: "all equal to *y*", plus the *n* − 1 configurations in which the first *i* processors (1 ≤ *i* ≤ *n* − 1) already hold *y* + 1 and the rest still hold *y*. That gives (*n* + 1) · *n*.
 
-> **Beyond the slides (course quiz):** quiz questions show coloured rings and ask how many processors can change state; count the colour boundaries as above. The quiz also says there are at least *n*(*n* + 1) different safe configurations. For each of the *n* + 1 values *y* there are *n* legitimate configurations: "all equal to *y*", plus the *n* − 1 configurations in which the first *i* processors (1 ≤ *i* ≤ *n* − 1) already hold *y* + 1 and the rest still hold *y*. That gives (*n* + 1) · *n*.
+## 3. Correctness and a worked example
 
-## 6. Proof of self-stabilization
+### 3.1 Proof of self-stabilization
 
 The proof follows the definition from the analytical framework: show that (a) certain configurations are **safe** (closure), and (b) every fair execution **reaches** one of them (convergence). It has four parts:
 
@@ -187,7 +182,7 @@ The proof follows the definition from the analytical framework: show that (a) ce
 - **Lemma 2.4:** for every configuration *c*, in every fair execution starting in *c*, **p₁ changes the value of x₁ at least once in every n rounds**.
 - **Theorem 2.1:** for every configuration *c*, every fair execution that starts in *c* **reaches a safe configuration with relation to ME within O(n²) rounds**.
 
-### 6.1 Lemma 2.2: all-equal configurations are safe
+#### Lemma 2.2: all-equal configurations are safe
 
 Suppose every *x* variable holds the same value *y*, and let *z* = (*y* + 1) mod (*n* + 1). In this configuration only the root can move (*x*₁ = *xₙ*); no other processor can, because each *xᵢ* equals *xᵢ₋₁*. By fairness, the root is eventually activated and sets *x*₁ to *z*, a value that **no other variable holds**. Now only *p*₂ can move; it copies *z*; then only *p*₃ can move, and so on. Writing the configuration at the end of each asynchronous round *r* (in the slowest case where the token advances one processor per round):
 
@@ -202,9 +197,9 @@ Suppose every *x* variable holds the same value *y*, and let *z* = (*y* + 1) mod
 
 In every configuration along the way **exactly one processor can change its state**, and **each processor changes its value exactly once**. At round *n* all variables are equal again (now to *z*), so the same argument repeats forever. Hence every processor changes state infinitely often and there is always exactly one token: every fair execution from an all-equal configuration is in ME. ∎
 
-> **Beyond the slides (Dolev, proof of Lemma 2.2):** in the configuration *cᵢ* reached after *pᵢ* copies, *x*₁ = … = *xᵢ* ≠ *xᵢ₊₁* = … = *xₙ*, so the only processor that can move is *pᵢ₊₁*.
+**Additional context (Dolev, proof of Lemma 2.2).** in the configuration *cᵢ* reached after *pᵢ* copies, *x*₁ = … = *xᵢ* ≠ *xᵢ₊₁* = … = *xₙ*, so the only processor that can move is *pᵢ₊₁*.
 
-### 6.2 The pigeonhole principle and Lemma 2.3: a missing value
+#### The pigeonhole principle and Lemma 2.3: a missing value
 
 **Pigeonhole principle (Dirichlet's box principle).** Suppose *n* items are put into *m* < *n* containers. Then at least one container contains more than one item. The equivalent "reverse" form is what we need: if *n* items are put into *n* + 1 containers, at least one container stays **empty**.
 
@@ -214,9 +209,7 @@ In every configuration along the way **exactly one processor can change its stat
 
 The lecture illustrates this with colours: with *n* = 8 processors and 9 colours, each processor shows one colour, and colour number 9 (= *j*) is not used by anybody. This idea is called the **missing value** (or missing label) concept, and it is the heart of the proof.
 
-*Everyday example:* 8 children each pick one of 9 hats. At least one hat is left on the shelf.
-
-### 6.3 Lemma 2.4: the root changes x1 at least once every n rounds
+#### Lemma 2.4: the root changes x1 at least once every n rounds
 
 **Lemma 2.4.** For every configuration *c*, in every fair execution that starts in *c*, processor *p*₁ changes the value of *x*₁ at least once in every *n* rounds.
 
@@ -239,9 +232,7 @@ The lecture's table shows the same thing with values (*a*₁, *a*₂, …, *aₙ
 
 Once every value equals *a*₁, the root's condition *x*₁ = *xₙ* is true and it must move: contradiction. (The lecture's last row prints *xₙ₋₁* = *aₙ₋₁*; this is a typo, since *xₙ₋₁* already equals *a*₁ in the previous row and cannot change back.)
 
-*Everyday example:* a rumour (the root's value) passes from child to child around a circle, one child per turn. After at most *n* turns everyone has heard it, and then the first child must start a new rumour.
-
-### 6.4 Theorem 2.1: convergence to a safe configuration
+#### Theorem 2.1: convergence to a safe configuration
 
 **Theorem 2.1.** For every possible configuration *c*, every fair execution that starts in *c* reaches a safe configuration with relation to ME within O(*n*²) rounds.
 
@@ -266,9 +257,9 @@ flowchart LR
 
 Why does the missing value matter so much? Any "old" value that is copied around was already in the ring. A brand-new value that nobody else has, created by the root, can only travel by being copied step by step from *p*₁ to *pₙ*; on its way it **overwrites all the old values**, which removes all extra tokens.
 
-> **Beyond the slides (Dolev §2.6):** the algorithm still stabilizes with only *n* possible values, and also with *n* − 1 values (a more careful case analysis). With *n* − 2 values it does **not**: for *n* = 5 and values mod 3, the configuration {0, 0, 2, 1, 0} with processors repeatedly activated in the order *p*₁, *p*₅, *p*₄, *p*₃, *p*₂ cycles forever without reaching a safe configuration.
+**Additional context (Dolev §2.6).** the algorithm still stabilizes with only *n* possible values, and also with *n* − 1 values (a more careful case analysis). With *n* − 2 values it does **not**: for *n* = 5 and values mod 3, the configuration {0, 0, 2, 1, 0} with processors repeatedly activated in the order *p*₁, *p*₅, *p*₄, *p*₃, *p*₂ cycles forever without reaching a safe configuration.
 
-## 7. A complete worked example
+### 3.2 A complete worked example
 
 Take *n* = 4, so values are 0–4 and the root increments modulo 5. Start from the illegal configuration (2, 0, 3, 0), which has three tokens (*p*₂, *p*₃, *p*₄). One possible fair schedule:
 
@@ -288,10 +279,19 @@ Take *n* = 4, so values are 0–4 and the root increments modulo 5. Start from t
 
 After step 4 there is exactly one token, and from step 6 on the ring is in an all-equal (safe) configuration, after which the single token circulates *p*₁ → *p*₂ → *p*₃ → *p*₄ → *p*₁ forever. Notice how the tokens behave: in step 1, *p*₄ copies *x*₃ and its own token disappears; in step 2, *p*₃ copies a new value, which removes *p*₃'s token but creates a new difference at *p*₄, so the token has simply moved on. The number of tokens never increases. In this particular schedule the ring stabilized before the root needed to use the missing value; Theorem 2.1 is the guarantee for the worst schedule.
 
-> **Beyond the slides (verification):** the number of tokens can never grow. A non-root step *xᵢ* := *xᵢ₋₁* removes *pᵢ*'s token and can at most create one token at *pᵢ₊₁* (it passes the token along). A root step removes the root's token and can at most create one at *p*₂. So each step moves or destroys a token, never creates an extra one.
+**Additional context (verification).** the number of tokens can never grow. A non-root step *xᵢ* := *xᵢ₋₁* removes *pᵢ*'s token and can at most create one token at *pᵢ₊₁* (it passes the token along). A root step removes the root's token and can at most create one at *p*₂. So each step moves or destroys a token, never creates an extra one.
 
-## 8. Recap
+## 4. Summary
+
+### 4.1 Recap
 
 - **Task ME:** in every configuration exactly one processor can change its state (holds the token), and every processor does so infinitely often.
 - **Algorithm:** the root increments when *x*₁ = *xₙ*; every other processor copies its predecessor when they differ. Values range over 0–*n*.
 - **Proof structure:** all-equal is safe (Lemma 2.2); a missing value always exists (Lemma 2.3, pigeonhole); the root moves at least every *n* rounds (Lemma 2.4); so within *n*² rounds the root writes the missing value, and within *n* more rounds it has swept the ring, giving a safe configuration in ***n*² + *n* ∈ O(*n*²)** rounds (Theorem 2.1).
+
+## Revision notes and references
+
+This guide found no errors in the lecture material that needed a technical clarification. Where the slides and the course book differ in presentation, this guide follows the lecture and notes the book's version.
+
+- S. Dolev, *Self-Stabilization*, MIT Press, 2000: §2.6 (Dijkstra's mutual exclusion algorithm, Lemmas 2.2–2.4 and Theorem 2.1).
+- E. W. Dijkstra, "Self-stabilizing systems in spite of distributed control", *Communications of the ACM* 17(11), 1974.

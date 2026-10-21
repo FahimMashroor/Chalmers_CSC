@@ -2,17 +2,17 @@
 
 **Course:** EDA387/DIT663 Computer Networks, part 2 (Fault-tolerant Algorithms for Computer Networks), lecture "Spanning tree construction" (Dolev, *Self-Stabilization*, §2.5 and §2.7)
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
-**† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. In this lecture the hidden slides contain the book's original, round-based version of the correctness proof; it appears in [Section 8.5](#85-the-book-version-of-the-proof-).
+**† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. In this lecture the hidden slides contain the book's original, round-based version of the correctness proof; it appears in [Section 3.2](#the-book-version-of-the-proof-).
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context from the course book (Dolev), from the course's own pre-lecture quiz, or a short explanation of reasoning that the lecture leaves implicit. **Everyday example** and **Kid example** retell an idea with an everyday picture. Everything else follows the lecture.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | A-projection | — | The part of a configuration (or execution) that belongs to the server algorithm only: (*a*ₚ₁, …, *a*ₚₙ). |
 | Asynchronous cycle | — | The shortest stretch of an execution in which every processor completes at least one full iteration of its do-forever loop. |
@@ -47,30 +47,29 @@
 | STP | Spanning Tree Protocol | The Ethernet protocol that disables some links so that the active links form a loop-free spanning tree. |
 | TTL | Time To Live | A counter in IP packets that is decreased at every hop; the packet is dropped at zero. Ethernet frames have no TTL. |
 
----
+## Contents
 
-## Table of contents
+- [1. Motivation: switching loops and spanning trees](#1-motivation-switching-loops-and-spanning-trees)
+  - [1.1 Goal of the lecture](#11-goal-of-the-lecture)
+  - [1.2 The problem: switching loops](#12-the-problem-switching-loops)
+  - [1.3 The Spanning Tree Protocol](#13-the-spanning-tree-protocol)
+- [2. Breadth-first search trees](#2-breadth-first-search-trees)
+  - [2.1 Breadth-first search and BFS trees](#21-breadth-first-search-and-bfs-trees)
+  - [2.2 A non-self-stabilizing distributed BFS tree](#22-a-non-self-stabilizing-distributed-bfs-tree)
+  - [2.3 The self-stabilizing setting: registers encode the tree](#23-the-self-stabilizing-setting-registers-encode-the-tree)
+- [3. The self-stabilizing BFS spanning tree](#3-the-self-stabilizing-bfs-spanning-tree)
+  - [3.1 The self-stabilizing first-BFS algorithm](#31-the-self-stabilizing-first-bfs-algorithm)
+  - [3.2 Correctness](#32-correctness)
+- [4. Fair composition](#4-fair-composition)
+  - [4.1 Fair composition](#41-fair-composition)
+  - [4.2 Example: mutual exclusion in general graphs](#42-example-mutual-exclusion-in-general-graphs)
+- [5. Summary](#5-summary)
+  - [5.1 Recap](#51-recap)
+- [Revision notes and references](#revision-notes-and-references)
 
-1. [Goal of the lecture](#1-goal-of-the-lecture)
-2. [The problem: switching loops](#2-the-problem-switching-loops)
-3. [The Spanning Tree Protocol](#3-the-spanning-tree-protocol)
-4. [Breadth-first search and BFS trees](#4-breadth-first-search-and-bfs-trees)
-5. [A non-self-stabilizing distributed BFS tree](#5-a-non-self-stabilizing-distributed-bfs-tree)
-6. [The self-stabilizing setting: registers encode the tree](#6-the-self-stabilizing-setting-registers-encode-the-tree)
-7. [The self-stabilizing first-BFS algorithm](#7-the-self-stabilizing-first-bfs-algorithm)
-8. [Correctness](#8-correctness)
-    - [8.1 The task ST and floating distances](#81-the-task-st-and-floating-distances)
-    - [8.2 A reminder: proof by induction](#82-a-reminder-proof-by-induction)
-    - [8.3 Lemma 2.1 (cycle version)](#83-lemma-21-cycle-version)
-    - [8.4 From correct distances to the first BFS tree](#84-from-correct-distances-to-the-first-bfs-tree)
-    - [8.5 The book version of the proof †](#85-the-book-version-of-the-proof-)
-9. [Fair composition](#9-fair-composition)
-10. [Example: mutual exclusion in general graphs](#10-example-mutual-exclusion-in-general-graphs)
-11. [Recap](#11-recap)
+## 1. Motivation: switching loops and spanning trees
 
----
-
-## 1. Goal of the lecture
+### 1.1 Goal of the lecture
 
 We want to understand how to design self-stabilizing network protocols. After this lecture you should be able to:
 
@@ -80,15 +79,13 @@ We want to understand how to design self-stabilizing network protocols. After th
 
 The lecture then shows how to combine this algorithm with Dijkstra's token ring (fair composition), which gives **token circulation in general networks that have one distinguished processor**.
 
-## 2. The problem: switching loops
+### 1.2 The problem: switching loops
 
 A **switching loop** occurs when there are **several data-link layer paths between two nodes**. For example, four switches S1–S4 connected in a square give two different paths between any pair of PCs attached to them.
 
 Loops allow **broadcast storms**. When a switch receives a broadcast Ethernet frame, it forwards it **out of every port**. In a loop, the copies come back around and are broadcast again, and again: the frame is broadcast repeatedly and congests the network.
 
 The data-link layer **does not use the TTL technique**. IP packets carry a Time-To-Live counter that kills them after a number of hops, but an Ethernet frame has no such field. So when a frame is sent into a looped topology, it **can proliferate forever**.
-
-> **Kid example.** Four friends stand in a square and each one passes on every rumour to both neighbours. A rumour then runs round and round the square forever and keeps multiplying, and soon nobody can hear anything else: that is a broadcast storm. A spanning tree is the rule "Ana and Ben stop talking to each other directly": now there is exactly one way for a rumour to reach each friend, and it dies out after reaching everyone.
 
 ```mermaid
 flowchart LR
@@ -106,9 +103,7 @@ flowchart LR
 
 S2 and S3 are connected through S1 **and** through S4, which forms the loop S2–S1–S3–S4–S2.
 
-*Everyday example:* four friends in a circle, each told "whenever you hear news, shout it to everybody next to you". One piece of news then bounces around the circle forever, and nobody can talk about anything else.
-
-## 3. The Spanning Tree Protocol
+### 1.3 The Spanning Tree Protocol
 
 The **Spanning Tree Protocol (STP)** constructs a **loop-free logical topology** for Ethernet switches:
 
@@ -128,7 +123,7 @@ flowchart TB
     SW3 --- C["PC Arvind"]
 ```
 
-### History and related protocols
+#### History and related protocols
 
 - STP was originally standardized as **IEEE 802.1D**. The **first STP algorithm is by Radia Perlman**, who wrote it for her master's thesis.
 - **Rapid Spanning Tree Protocol (RSTP)** was introduced by IEEE in **2001** as **802.1w**; it reduces convergence time.
@@ -143,7 +138,9 @@ Many other related protocols exist:
 - **Automatic Attachment to Provider Backbone Bridging**: simplifies attaching customer networks to provider networks.
 - **IS-IS Extensions Supporting Shortest Path Bridging**: lets IS-IS carry the information SPB needs.
 
-## 4. Breadth-first search and BFS trees
+## 2. Breadth-first search trees
+
+### 2.1 Breadth-first search and BFS trees
 
 **Breadth-first search (BFS)** is an algorithm for traversing a network. The starting node is called the **root**. The algorithm explores **all neighbouring nodes first**, before moving to the next-level neighbours.
 
@@ -170,7 +167,7 @@ function BFS(Graph, root):
 
 Because the queue is first-in first-out, all nodes at distance 1 are handled before any node at distance 2, and so on. That is exactly why every tree path is a shortest path.
 
-### The running example
+#### The running example
 
 The lecture uses one example graph throughout. The numbers below are the processor names used on the lecture's register slide (*p*₁ is the root); the distance of each node from the root is given in brackets.
 
@@ -211,7 +208,7 @@ flowchart BT
 
 The links *p*₂–*p*₆, *p*₇–*p*₃ and *p*₃–*p*₈ exist in the graph but are not tree edges.
 
-## 5. A non-self-stabilizing distributed BFS tree
+### 2.2 A non-self-stabilizing distributed BFS tree
 
 A simple distributed (message-passing) BFS works like this:
 
@@ -231,9 +228,9 @@ non-root:
 
 The root announces 0; each neighbour learns "I am at distance 1" and announces it; and so on. Every node keeps the smallest distance it has heard plus one, and the neighbour it heard it from becomes its parent.
 
-> **Beyond the slides (reasoning):** this algorithm is **not self-stabilizing** because it depends on the **initial values** (0 at the root, ∞ elsewhere) and the root sends only once. If a transient fault leaves a non-root processor with a distance that is too small, say 0, the test "*d* + 1 < distance" can never increase it again, and the wrong value is believed forever. A self-stabilizing algorithm cannot rely on initialization; it must **recompute everything repeatedly** from the neighbours' current values.
+**Additional context (reasoning).** this algorithm is **not self-stabilizing** because it depends on the **initial values** (0 at the root, ∞ elsewhere) and the root sends only once. If a transient fault leaves a non-root processor with a distance that is too small, say 0, the test "*d* + 1 < distance" can never increase it again, and the wrong value is believed forever. A self-stabilizing algorithm cannot rely on initialization; it must **recompute everything repeatedly** from the neighbours' current values.
 
-## 6. The self-stabilizing setting: registers encode the tree
+### 2.3 The self-stabilizing setting: registers encode the tree
 
 The self-stabilizing algorithm uses the **shared-memory model**:
 
@@ -243,7 +240,7 @@ The self-stabilizing algorithm uses the **shared-memory model**:
 
 **Each node has one register per neighbour**, with two fields:
 
-> ⟨**child-indication**, **distance**⟩ — written *rᵢⱼ*.parent and *rᵢⱼ*.dis.
+⟨**child-indication**, **distance**⟩ — written *rᵢⱼ*.parent and *rᵢⱼ*.dis.
 
 *rᵢⱼ*.parent = 1 means "*pⱼ* is my parent" (I am *pⱼ*'s child); 0 means it is not. *rᵢⱼ*.dis is *pᵢ*'s distance from the root.
 
@@ -256,7 +253,7 @@ In the running example, after stabilization:
 
 The lecture's register examples: *r*₂₁ = (parent = 1, dis = 1); *r*₅₈ = (parent = 1, dis = 3); *r*₇₃ = (parent = 0, dis = 2).
 
-### What is a first BFS tree?
+#### What is a first BFS tree?
 
 Given a graph *G* = (*V*, *E*) and a root *v* ∈ *V*, **can there be more than one BFS tree rooted at *v***? Yes: whenever a node has **several shortest paths to the root**. In the lecture's version of the example graph with an extra link *p*₆–*p*₈, node *p*₈ (distance 2) has two neighbours at distance 1, *p*₄ and *p*₆. Both choices give a valid BFS tree:
 
@@ -276,9 +273,11 @@ In option A, *p*₈ writes ⟨1, 2⟩ towards *p*₄ and ⟨0, 2⟩ towards *p*�
 
 **The first-BFS tree construction selects the "first" of these paths.** Each processor decides on the order using **local identifiers**: it has a fixed, arbitrary ordering of its own links (port 1, port 2, …), and it picks the first neighbour in that ordering that has the smallest distance. So the tree is unique once the root and the local link orderings are fixed.
 
-> **Beyond the slides (Dolev §2.5):** formally, let α*ᵢ* be the ordering of the edges incident to node *vᵢ*. The first BFS tree is uniquely defined by the root and the α orderings: a node at distance *x* + 1 with several neighbours at distance *x* connects to the first such neighbour according to α*ᵢ*.
+**Additional context (Dolev §2.5).** formally, let α*ᵢ* be the ordering of the edges incident to node *vᵢ*. The first BFS tree is uniquely defined by the root and the α orderings: a node at distance *x* + 1 with several neighbours at distance *x* connects to the first such neighbour according to α*ᵢ*.
 
-## 7. The self-stabilizing first-BFS algorithm
+## 3. The self-stabilizing BFS spanning tree
+
+### 3.1 The self-stabilizing first-BFS algorithm
 
 The idea, from Dolev, Israeli and Moran (1993, "Self-stabilization of dynamic systems assuming only read/write atomicity", *Distributed Computing* 7(1):3–16):
 
@@ -327,11 +326,11 @@ Notes on the code:
 - **FirstFound** guarantees that by the end of each pass every non-root processor marks **exactly one parent**: the **first** neighbour, in its local link order, whose distance is one less than its own.
 - Everything is recomputed from scratch in every iteration, from the neighbours' current registers. Nothing depends on initial values; this is what makes it self-stabilizing.
 
-> **Beyond the slides (Dolev §2.5):** the distance field is bounded by *N*, an upper bound on the number of processors; an attempt to write a larger value writes *N*. Non-root processors with the same number of neighbours run identical programs.
+**Additional context (Dolev §2.5).** the distance field is bounded by *N*, an upper bound on the number of processors; an attempt to write a larger value writes *N*. Non-root processors with the same number of neighbours run identical programs.
 
-## 8. Correctness
+### 3.2 Correctness
 
-### 8.1 The task ST and floating distances
+#### The task ST and floating distances
 
 **Task ST:** every configuration **encodes a first BFS tree** of the communication graph. (A configuration is the vector of processor states plus the vector of register values; ST is the set of configuration sequences in which every configuration encodes the BFS tree.)
 
@@ -344,9 +343,7 @@ Notes on the code:
 
 Floating distances are the "lies" left by transient faults: a processor claiming to be closer to the root than it really is. Too-large values are harmless (the minimum in line 07 ignores them as soon as a correct, smaller value is available), but too-small values attract neighbours. The proof shows that the smallest lie keeps growing until it disappears.
 
-> **Kid example.** Imagine that, after a storm, a few children wrongly believe they live close to the school. Their neighbours believe them and say "then I am one step further", and so on. But every time the false story is passed on, the claimed distance grows by one, while the true distances from the real school never change. After a while the false story claims a distance that is bigger than the true ones, and everybody prefers the true, smaller numbers. That is why the smallest floating distance keeps growing until it disappears.
-
-### 8.2 A reminder: proof by induction
+#### A reminder: proof by induction
 
 A proof by induction has three parts:
 
@@ -366,16 +363,14 @@ A proof by induction has three parts:
 
 So the statement holds for *k* + 1, and therefore for every positive integer.
 
-*Everyday example:* dominoes. If the first one falls (base case), and every domino knocks over the next (step), then all of them fall.
-
-### 8.3 Lemma 2.1 (cycle version)
+#### Lemma 2.1 (cycle version)
 
 The lecture proves a version that is simpler than the one in the book, counting **asynchronous cycles**. Recall: the first asynchronous cycle of a fair execution is the shortest prefix in which every processor executes at least one complete iteration of the do-forever loop; the second cycle starts right after the first, and so on. So **in every asynchronous cycle, each processor reads the registers of all its neighbours and writes to each of its registers** (the root runs lines 01–03, the others lines 04–16).
 
-> **Lemma 2.1.** For every *k* > 0 and for every configuration that follows **2*k* asynchronous cycles**:
->
-> - **Assertion (1):** if there exists a floating distance, then the value of the smallest floating distance is **at least *k***.
-> - **Assertion (2):** the value in the registers of **every processor within distance *k* from the root equals its distance** from the root.
+**Lemma 2.1.** For every *k* > 0 and for every configuration that follows **2*k* asynchronous cycles**:
+
+- **Assertion (1):** if there exists a floating distance, then the value of the smallest floating distance is **at least *k***.
+- **Assertion (2):** the value in the registers of **every processor within distance *k* from the root equals its distance** from the root.
 
 **Base case, k = 1.**
 
@@ -418,32 +413,32 @@ flowchart TB
 
 This proves Assertion (2) for *k* + 1. ∎
 
-### 8.4 From correct distances to the first BFS tree
+#### From correct distances to the first BFS tree
 
 Once the value in the registers of every processor equals its distance from the root, each processor *pᵢ* chooses as its parent **the first neighbour, according to its internal link ordering, whose distance is smaller than its own**, which is exactly its parent in the first BFS tree.
 
-> **Corollary 2.1.** The algorithm is self-stabilizing for ST.
+**Corollary 2.1.** The algorithm is self-stabilizing for ST.
 
-> **Beyond the slides (reasoning from Lemma 2.1):** let *d* be the largest distance of any processor from the root (*d* ≤ *n* − 1). Applying Assertion (2) with *k* = *d* shows that after 2*d* cycles every register holds the correct distance. In the next cycle each processor rereads its neighbours' now-correct registers and rewrites its parent bits, so the first BFS tree is encoded within O(*d*) cycles.
+**Additional context (reasoning from Lemma 2.1).** let *d* be the largest distance of any processor from the root (*d* ≤ *n* − 1). Applying Assertion (2) with *k* = *d* shows that after 2*d* cycles every register holds the correct distance. In the next cycle each processor rereads its neighbours' now-correct registers and rewrites its parent bits, so the first BFS tree is encoded within O(*d*) cycles.
 
-### 8.5 The book version of the proof †
+#### The book version of the proof †
 
 The book proves the same lemma while counting **rounds** instead of cycles. Since one iteration of the do-forever loop takes O(Δ) steps, **in every 2Δ successive rounds each processor reads the registers of all its neighbours and writes to each of its registers**. The lemma reads: for every *k* > 0 and every configuration that follows **Δ + 4*k*Δ rounds**, Assertions 1 and 2 hold. The proof is by induction over *k*:
 
 - **Base case, Assertion 1:** distances are non-negative, so the smallest floating distance is at least 0 initially. During the first 2Δ rounds each non-root processor computes dist (line 07), and the result is at least 1. Let *c*₂ be the configuration after every processor's first computation of dist. During the 2Δ rounds that follow *c*₂, each non-root processor writes that value to all its registers. So after the first 4Δ rounds no non-root processor has 0 in its registers.
 - **Base case, Assertion 2:** the root writes 0 to its registers in every Δ rounds. Let *c*₁ be the configuration after these Δ rounds. Each processor reads the root's registers and then writes to its own registers during the 4Δ rounds that follow *c*₁, assigning 1. Any further read of the root returns 0, so after the first Δ + 4Δ rounds every neighbour of the root holds 1.
 - **Induction step:** assume correctness for *k* ≥ 0. Let *m* ≥ *k* be the smallest floating distance in the configuration *c*₄ₖ that follows the first Δ + 4*k*Δ rounds. During the 4Δ rounds that follow, each processor that reads *m* and chooses it as the smallest value writes *m* + 1, so the smallest floating distance is *m* + 1 in *c*₄₍ₖ₊₁₎ (Assertion 1). Since the smallest floating distance is *m* ≥ *k*, each processor at distance *k* + 1 reads a neighbour of distance *k* and assigns *k* + 1: it cannot choose a neighbour with a larger distance (the algorithm takes the minimum) or a smaller one (*k* is the shortest distance of any neighbour) (Assertion 2).
-- The corollary follows exactly as in Section 8.4.
+- The corollary follows exactly as in the subsection "From correct distances to the first BFS tree" above.
 
-## 9. Fair composition
+## 4. Fair composition
+
+### 4.1 Fair composition
 
 We now know two self-stabilizing algorithms: Dijkstra's token ring and the BFS tree construction. **Fair composition** lets us build bigger self-stabilizing algorithms out of smaller ones.
 
 **The idea.** Compose self-stabilizing algorithms *AL*₁, …, *ALₖ* so that **the stabilized behaviour of *AL*₁, *AL*₂, …, *ALᵢ* is used by *ALᵢ₊₁***. *ALᵢ₊₁* **cannot detect** whether the earlier algorithms have stabilized, but it is **executed as if they have**. It is similar to network layering, where each layer uses the service of the layer below.
 
 The technique is described for *k* = 2: two simple algorithms, a **server** and a **client**, are combined into a more complex algorithm. **The server ensures that some properties hold, and the client uses them.**
-
-> **Kid example.** Fair composition is like building a house: the foundation (the server) must settle first, and the walls (the client) are built on top. The builders of the walls cannot see whether the foundation has settled yet, but once it has, the walls will end up straight. In the example below, the spanning tree is the foundation and the token circulation is the walls.
 
 **Definitions.**
 
@@ -453,7 +448,7 @@ The technique is described for *k* = 2: two simple algorithms, a **server** and 
 - *AL*₂ is **self-stabilizing for task *T*₂ given task *T*₁** if every fair execution of *AL*₂ that has an A-projection in *T*₁ has a suffix in *T*₂. In words: if the server behaves legally, the client eventually behaves legally.
 - *AL* is a **fair composition** of *AL*₁ and *AL*₂ if, in *AL*, **every processor executes steps of *AL*₁ and *AL*₂ alternately**.
 
-> **Theorem 2.2.** Assume *AL*₂ is self-stabilizing for task *T*₂ given task *T*₁. If *AL*₁ is self-stabilizing for *T*₁, then the fair composition of *AL*₁ and *AL*₂ is self-stabilizing for *T*₂.
+**Theorem 2.2.** Assume *AL*₂ is self-stabilizing for task *T*₂ given task *T*₁. If *AL*₁ is self-stabilizing for *T*₁, then the fair composition of *AL*₁ and *AL*₂ is self-stabilizing for *T*₂.
 
 ```mermaid
 flowchart LR
@@ -461,13 +456,13 @@ flowchart LR
     B -- "client AL2 stabilizes given T1" --> C["Composed system legal (in T2)"]
 ```
 
-> **Beyond the slides (Dolev §2.7):** the proof is two lines: by the self-stabilization of *AL*₁, every execution has a suffix whose A-projection is in *T*₁; by the assumption on *AL*₂, that suffix has a further suffix in *T*₂. It is enough that every processor executes steps of both algorithms infinitely often, and the server does not need to reach a state where its registers never change.
+**Additional context (Dolev §2.7).** the proof is two lines: by the self-stabilization of *AL*₁, every execution has a suffix whose A-projection is in *T*₁; by the assumption on *AL*₂, that suffix has a further suffix in *T*₂. It is enough that every processor executes steps of both algorithms infinitely often, and the server does not need to reach a state where its registers never change.
 
-## 10. Example: mutual exclusion in general graphs
+### 4.2 Example: mutual exclusion in general graphs
 
 Dijkstra's algorithm only works on a ring. To get token circulation on **any** connected graph with one distinguished processor, **compose the spanning tree construction (server) with the mutual exclusion algorithm (client)**.
 
-### The Euler tour turns a tree into a ring
+#### The Euler tour turns a tree into a ring
 
 An **Euler tour** of a rooted tree walks around the tree, traversing every edge twice: once going down and once coming back up. Example: a root with children *A* (edge 1), *B* (edge 3) and *C* (edge 5); *A* has children *D* (edge 2) and *E* (edge 4); *D* has a child *F* (edge 6).
 
@@ -483,7 +478,7 @@ flowchart TB
 
 Starting at the root, the tour traverses the edges in the order **1, 2, 6, 6, 2, 4, 4, 1, 3, 3, 5, 5**. Walking this tour forever is like walking around a ring, so **an Euler tour defines a virtual ring**.
 
-### The modified mutual exclusion algorithm
+#### The modified mutual exclusion algorithm
 
 The lecture uses a version of Dijkstra's algorithm **designed to stabilize in a system where a rooted spanning tree exists and only read/write atomicity is assumed** (one read or one write per step, not the powerful central daemon).
 
@@ -539,7 +534,7 @@ In words: a non-root processor reads from its parent link and passes the value d
 
 (The code follows Dolev, Figure 2.5. On the lecture slide the δ subscript in line 03 is lost; line 05 is written here with explicit parentheses, (lr₁,ᵢ + 1) mod (4*n* − 5), which is its intended meaning.)
 
-### Putting it together
+#### Putting it together
 
 - Mutual exclusion is applied to a spanning tree of the system, using the ring defined by the Euler tour.
 - **The parent field of the spanning tree algorithm defines the parent of each processor in the tree** (and hence its children too).
@@ -556,11 +551,20 @@ flowchart TB
     T -- "client reads the parent fields,<br/>never writes them" --> M
 ```
 
-> **Beyond the slides (Dolev §2.7):** one way to implement the alternation is a binary variable turnᵢ in each processor: when turnᵢ = 0 the processor executes the next step of the tree construction, when turnᵢ = 1 a step of mutual exclusion, and then flips turnᵢ. The composed algorithm can itself be used as a server that implements a central daemon (one processor activated at a time) for other client algorithms.
+**Additional context (Dolev §2.7).** one way to implement the alternation is a binary variable turnᵢ in each processor: when turnᵢ = 0 the processor executes the next step of the tree construction, when turnᵢ = 1 a step of mutual exclusion, and then flips turnᵢ. The composed algorithm can itself be used as a server that implements a central daemon (one processor activated at a time) for other client algorithms.
 
-## 11. Recap
+## 5. Summary
+
+### 5.1 Recap
 
 - **Loops** at the data-link layer cause broadcast storms because Ethernet frames have no TTL; **STP** prevents them by building a spanning tree (first algorithm by Radia Perlman).
 - The **self-stabilizing first-BFS algorithm** has the root write ⟨0, 0⟩ forever, and every other processor repeatedly set its distance to 1 + the minimum neighbour distance, marking as parent the first neighbour (in its local order) with distance one less.
 - **Correctness** rests on **floating distances**: after 2*k* cycles the smallest floating distance is at least *k* and all processors within distance *k* are correct (Lemma 2.1, by induction). Hence the algorithm is self-stabilizing for ST (Corollary 2.1).
 - **Fair composition** (Theorem 2.2): if the server stabilizes and the client stabilizes given the server's task, then running them alternately stabilizes. Composing the BFS tree with Dijkstra's algorithm on the **Euler-tour virtual ring** gives self-stabilizing **token circulation in general networks** with one distinguished processor.
+
+## Revision notes and references
+
+This guide found no errors in the lecture material that needed a technical clarification. Where the slides and the course book differ in presentation, this guide follows the lecture and notes the book's version.
+
+- S. Dolev, *Self-Stabilization*, MIT Press, 2000: §2.5 (spanning-tree construction) and §2.7 (fair composition).
+- R. Perlman, "An Algorithm for Distributed Computation of a Spanning Tree in an Extended LAN", ACM SIGCOMM 1985: the Spanning Tree Protocol.

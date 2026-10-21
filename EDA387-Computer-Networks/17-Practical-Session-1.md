@@ -2,17 +2,17 @@
 
 **Course:** EDA387/DIT663 Computer Networks, part 2 (Fault-tolerant Algorithms for Computer Networks), Practical Session 1 (2026).
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. *This session has no hidden slides, so nothing in this guide carries the † mark.*
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context that is not in the session material, for example the wording of the home assignment itself, a worked example, or a check of the reasoning. **Kid example** retells an idea with an everyday picture. Everything else follows the session.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | Complete graph | — | A network where every processor is directly connected to every other processor. |
 | Globally unique identifier | — | A name (number) that belongs to exactly one processor in the whole system and is the same no matter who looks at it, like a MAC address. |
@@ -27,38 +27,34 @@
 | Virtual ring | — | An imaginary circle of processors that everybody agrees on, built here by sorting identifiers. |
 | XOR (⊕) | exclusive or | A bit operation: 1 if the two bits differ, 0 if they are equal. It has the "undo" property *a* ⊕ *b* ⊕ *b* = *a*. |
 
----
+## Contents
 
-## Table of contents
+- [1. The value-discovery problem](#1-the-value-discovery-problem)
+  - [1.1 What the session covers](#11-what-the-session-covers)
+  - [1.2 The problem: discovering your own secret](#12-the-problem-discovering-your-own-secret)
+- [2. Two solutions](#2-two-solutions)
+  - [2.1 Question 1: a solution with globally unique identifiers](#21-question-1-a-solution-with-globally-unique-identifiers)
+  - [2.2 Question 2: a solution with only local identifiers](#22-question-2-a-solution-with-only-local-identifiers)
+- [3. Summary](#3-summary)
+  - [3.1 Recap](#31-recap)
+- [Revision notes and references](#revision-notes-and-references)
 
-1. [What the session covers](#1-what-the-session-covers)
-2. [The problem: discovering your own secret](#2-the-problem-discovering-your-own-secret)
-3. [Question 1: a solution with globally unique identifiers](#3-question-1-a-solution-with-globally-unique-identifiers)
-   - [3.1 Algorithm 1](#31-algorithm-1)
-   - [3.2 Why Algorithm 1 is correct](#32-why-algorithm-1-is-correct)
-   - [3.3 A small example](#33-a-small-example)
-4. [Question 2: a solution with only local identifiers](#4-question-2-a-solution-with-only-local-identifiers)
-   - [4.1 The XOR trick, first for n = 3](#41-the-xor-trick-first-for-n--3)
-   - [4.2 The general case and Algorithm 2](#42-the-general-case-and-algorithm-2)
-   - [4.3 A small example with numbers](#43-a-small-example-with-numbers)
-5. [Recap](#5-recap)
+## 1. The value-discovery problem
 
----
-
-## 1. What the session covers
+### 1.1 What the session covers
 
 The session plan was:
 
-1. Review of the pre-lecture questions for **Analytical Framework**, **Dijkstra's algorithm** and **spanning-tree construction** (see guides 01, 02 and 03).
+1. Review of the pre-lecture questions for **Analytical Framework**, **Dijkstra's algorithm** and **spanning-tree construction** (see guides 07, 08 and 09).
 2. Discussion of student solutions.
 3. **Home Assignment 1:** a student solution and the proposed solution.
 4. Home Assignments 2 and 3 (introduced).
 
 The lecture contains the proposed solution to Home Assignment 1, which is what this guide explains.
 
-## 2. The problem: discovering your own secret
+### 1.2 The problem: discovering your own secret
 
-> **Beyond the slides.** The slides show only the solution, so here is the problem as stated in the 2026 home assignment ("Value discovery in complete graphs").
+**Additional context.** The slides show only the solution, so here is the problem as stated in the 2026 home assignment ("Value discovery in complete graphs").
 
 There are *n* processors *p*₀, …, *p*ₙ₋₁ (with *n* > 2 and known), connected as a **complete graph**. Each processor *pᵢ* has two registers:
 
@@ -78,13 +74,13 @@ The two questions differ in one thing:
 
 The answer to both is **yes, there is a solution**.
 
-## 3. Question 1: a solution with globally unique identifiers
+## 2. Two solutions
 
-### 3.1 Algorithm 1
+### 2.1 Question 1: a solution with globally unique identifiers
+
+#### Algorithm 1
 
 The idea: **use the order of the identifiers to build a virtual ring** that everyone agrees on. Then each processor copies the secret of the processor **before** it in the ring onto its own whiteboard, so the processor **after** you in the ring is holding your secret.
-
-> **Kid example.** Everyone at the party sorts the name tags alphabetically and imagines standing in a circle in that order. Each person writes on their own whiteboard the sticker number of the person just **before** them. Then you read the whiteboard of the person just **after** you: it shows your number. It works only because everyone agrees on the same alphabetical circle.
 
 ```text
 Algorithm 1: Using globally unique identifiers, code for processor pi
@@ -113,7 +109,7 @@ flowchart LR
 
 The arrows show the agreed order "who comes next" in the virtual ring; the ring is only a shared agreement, not a new physical link.
 
-### 3.2 Why Algorithm 1 is correct
+#### Why Algorithm 1 is correct
 
 The proof given in the session:
 
@@ -124,9 +120,9 @@ The proof given in the session:
 
 The register *rᵢ* holds this processor's identifier (⌈log₂ *M*⌉ bits) plus one secret value, which is exactly the space Question 1 allows.
 
-### 3.3 A small example
+#### A small example
 
-> **Beyond the slides.** A worked example of Algorithm 1.
+**Additional context.** A worked example of Algorithm 1.
 
 Three processors with identifiers 12, 3 and 7 and secrets ★, ● and ▲:
 
@@ -138,13 +134,13 @@ Three processors with identifiers 12, 3 and 7 and secrets ★, ● and ▲:
 
 Each processor outputs exactly its own secret, and none of them ever read their own *s*.
 
-## 4. Question 2: a solution with only local identifiers
+### 2.2 Question 2: a solution with only local identifiers
 
 Without global identifiers, the processors cannot agree on a ring. The trick is to use **XOR (⊕)**, which works like a lock you can open again with the same key: *a* ⊕ *b* ⊕ *b* = *a*.
 
-> **Beyond the slides.** XOR in one line: 1 ⊕ 1 = 0, 0 ⊕ 0 = 0, 1 ⊕ 0 = 1, 0 ⊕ 1 = 1, done bit by bit. For example 0110 ⊕ 0011 = 0101, and 0101 ⊕ 0011 = 0110 again. XOR-ing two values gives a result of the **same size**, so it fits in a constant-size register.
+**Additional context.** XOR in one line: 1 ⊕ 1 = 0, 0 ⊕ 0 = 0, 1 ⊕ 0 = 1, 0 ⊕ 1 = 1, done bit by bit. For example 0110 ⊕ 0011 = 0101, and 0101 ⊕ 0011 = 0110 again. XOR-ing two values gives a result of the **same size**, so it fits in a constant-size register.
 
-### 4.1 The XOR trick, first for n = 3
+#### The XOR trick, first for n = 3
 
 Let every processor write into its register the XOR of **all the secrets it can see**:
 
@@ -158,9 +154,7 @@ Processor *p*₀ can read *r*₁ and *r*₂, and also *s*₁ and *s*₂. So:
 
 *p*₀ "removes" *s*₂ from *r*₁ and is left with its own secret.
 
-> **Kid example.** Think of XOR as mixing paint that you can un-mix. Jo's whiteboard holds the numbers of everybody except Jo, all mixed together. You can see every number except your own. So you un-mix from Jo's board all the numbers you can see (everyone except you and Jo). The only number left in the mix is yours.
-
-### 4.2 The general case and Algorithm 2
+#### The general case and Algorithm 2
 
 For any *n*: *r*₀ := *s*₁ ⊕ … ⊕ *s*ₙ₋₁, *r*₁ := *s*₀ ⊕ *s*₂ ⊕ … ⊕ *s*ₙ₋₁, …, *r*ₙ₋₁ := *s*₀ ⊕ … ⊕ *s*ₙ₋₂. Then
 
@@ -190,9 +184,9 @@ Step by step:
 
 The session states that **Algorithm 2's correctness proof follows the same arguments as Algorithm 1's**: once every processor has written the XOR of the secrets it sees, every processor's output is its own secret. Each register holds just one secret-sized value, as Question 2 requires.
 
-### 4.3 A small example with numbers
+#### A small example with numbers
 
-> **Beyond the slides.** A worked example of Algorithm 2 with 4-bit secrets.
+**Additional context.** A worked example of Algorithm 2 with 4-bit secrets.
 
 Let *n* = 4 with *s*₀ = 0101, *s*₁ = 0011, *s*₂ = 1000, *s*₃ = 1111.
 
@@ -200,8 +194,16 @@ Let *n* = 4 with *s*₀ = 0101, *s*₁ = 0011, *s*₂ = 1000, *s*₃ = 1111.
 - *p*₀ picks *pⱼ* = *p*₁ (any choice works). It computes *r*₁ ⊕ *s*₂ ⊕ *s*₃ = 0010 ⊕ 1000 ⊕ 1111 = 0101.
 - 0101 is exactly *s*₀. ✔
 
-## 5. Recap
+## 3. Summary
+
+### 3.1 Recap
 
 - **Question 1 (global identifiers):** sort the identifiers into a virtual ring; copy your predecessor's secret; read your own secret from your successor. Works because everyone eventually agrees on the same ring.
 - **Question 2 (local identifiers only):** write the XOR of all secrets you can see; recover your own secret from any other processor's register by XOR-ing away the secrets you know. No agreement on names is needed, and registers stay constant-size.
 - In both, only the **eventual** output matters, so no synchrony assumptions are needed.
+
+## Revision notes and references
+
+This guide found no errors in the lecture material that needed a technical clarification. Where the slides and the course book differ in presentation, this guide follows the lecture and notes the book's version.
+
+- S. Dolev, *Self-Stabilization*, MIT Press, 2000: chapter 2, for the model and the proof techniques the solutions use.

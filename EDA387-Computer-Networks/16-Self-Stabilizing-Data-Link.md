@@ -1,18 +1,18 @@
 # Self-Stabilizing Data Link: Why Crashes Force Us to Self-Stabilize
 
-**Course:** EDA387/DIT663 Computer Networks, part 2 (Fault-tolerant Algorithms for Computer Networks), lecture "Self-Stabilizing Data-Link (Ch. 3)". The lecture follows chapter 3 of Dolev, *Self-Stabilization*: §3.1 "Initialization of a Data-Link Algorithm in the Presence of Faults" and §3.2 "Arbitrary Configuration Because of Crashes". The self-stabilizing data-link *algorithms* themselves (unbounded counter, bounded labels, random labels) are taught in the next lecture and have their own guide, *17 Model Conversions*.
+**Course:** EDA387/DIT663 Computer Networks, part 2 (Fault-tolerant Algorithms for Computer Networks), lecture "Self-Stabilizing Data-Link (Ch. 3)". The lecture follows chapter 3 of Dolev, *Self-Stabilization*: §3.1 "Initialization of a Data-Link Algorithm in the Presence of Faults" and §3.2 "Arbitrary Configuration Because of Crashes". The self-stabilizing data-link *algorithms* themselves (unbounded counter, bounded labels, random labels) are taught in the next lecture and have their own guide, *13 Model Conversions*.
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. More than half of this short lecture is hidden material, and the lecture also says that the details of two proofs were "skipped this year". So the visible, examinable core is: the data-link task, the alternating-bit algorithm, its run example, and the two **statements** (no crash-tolerant data link exists; crashes can create any configuration). The proofs and the crash-resilient algorithm are †.
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context from the course book (Dolev), from old exams, or a short check of reasoning that the lecture leaves implicit. **Note on the source** marks a place where the lecture material is wrong, garbled or incomplete. **Kid example** retells an idea with an everyday picture.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | Acknowledgement (ack) | — | A frame the receiver sends back to say "I got it". In the alternating-bit algorithm the ack is just the receiver's current bit. |
 | After-crash state | — | The special state a processor is put in by a crash. Everything it knew before the crash is lost. |
@@ -42,27 +42,29 @@
 | Timeout | — | A timer that fires when no answer came for a while; the sender then sends the frame again. |
 | Undetectable crash/resume | — | A processor crashes and restarts, and the other side has no way to notice that it happened. |
 
----
+## Contents
 
-## Table of contents
+- [1. The data-link task and the alternating-bit algorithm](#1-the-data-link-task-and-the-alternating-bit-algorithm)
+  - [1.1 Where this lecture fits](#11-where-this-lecture-fits)
+  - [1.2 The data-link task](#12-the-data-link-task)
+  - [1.3 The alternating-bit algorithm](#13-the-alternating-bit-algorithm)
+  - [1.4 A run of the alternating-bit algorithm](#14-a-run-of-the-alternating-bit-algorithm)
+- [2. Crashes and the impossibility of initialization](#2-crashes-and-the-impossibility-of-initialization)
+  - [2.1 Theorem: there is no crash-tolerant data-link algorithm](#21-theorem-there-is-no-crash-tolerant-data-link-algorithm)
+  - [2.2 † The pumping technique (the proof)](#22--the-pumping-technique-the-proof)
+  - [2.3 Crashes can create an arbitrary configuration](#23-crashes-can-create-an-arbitrary-configuration)
+  - [2.4 † A crash-resilient data link when the number of frames is bounded](#24--a-crash-resilient-data-link-when-the-number-of-frames-is-bounded)
+  - [2.5 † Duplicates after a receiver crash, and exactly-once delivery](#25--duplicates-after-a-receiver-crash-and-exactly-once-delivery)
+  - [2.6 The lesson: why we need self-stabilization](#26-the-lesson-why-we-need-self-stabilization)
+- [3. Summary and review](#3-summary-and-review)
+  - [3.1 Recap](#31-recap)
+  - [3.2 Old exam questions on this lecture](#32-old-exam-questions-on-this-lecture)
+  - [3.3 Related topics not on these slides](#33-related-topics-not-on-these-slides)
+- [Revision notes and references](#revision-notes-and-references)
 
-1. [Where this lecture fits](#1-where-this-lecture-fits)
-2. [The data-link task](#2-the-data-link-task)
-3. [The alternating-bit algorithm](#3-the-alternating-bit-algorithm)
-4. [A run of the alternating-bit algorithm](#4-a-run-of-the-alternating-bit-algorithm)
-5. [Theorem: there is no crash-tolerant data-link algorithm](#5-theorem-there-is-no-crash-tolerant-data-link-algorithm)
-6. [† The pumping technique (the proof)](#6--the-pumping-technique-the-proof)
-7. [Crashes can create an arbitrary configuration](#7-crashes-can-create-an-arbitrary-configuration)
-8. [† A crash-resilient data link when the number of frames is bounded](#8--a-crash-resilient-data-link-when-the-number-of-frames-is-bounded)
-9. [† Duplicates after a receiver crash, and exactly-once delivery](#9--duplicates-after-a-receiver-crash-and-exactly-once-delivery)
-10. [The lesson: why we need self-stabilization](#10-the-lesson-why-we-need-self-stabilization)
-11. [Recap](#11-recap)
-12. [Old exam questions on this lecture](#12-old-exam-questions-on-this-lecture)
-13. [Related topics not on these slides](#13-related-topics-not-on-these-slides)
+## 1. The data-link task and the alternating-bit algorithm
 
----
-
-## 1. Where this lecture fits
+### 1.1 Where this lecture fits
 
 The lecture has a two-part roadmap:
 
@@ -71,11 +73,7 @@ The lecture has a two-part roadmap:
 
 The whole chapter is a **motivation** chapter. It shows that even the simplest network protocol, sending messages over one wire, cannot be protected by "restart and re-initialize" when crashes happen. The only design that still works is one that recovers from *any* state: a self-stabilizing one.
 
-> **Kid example.** Two friends pass notes across a classroom. Sometimes notes fall on the floor (frame loss), and sometimes one friend "forgets everything" (a crash). The lecture proves that no clever rule for passing notes can promise that every note after the last "forgetting" gets through, unless the rule can also fix itself from total confusion.
-
----
-
-## 2. The data-link task
+### 1.2 The data-link task
 
 "The task of delivering a message is sophisticated, and may cause message corruption or even loss." Three layers are involved:
 
@@ -103,15 +101,13 @@ flowchart LR
     H["Head<br/>(control info, e.g. the label)"] --- PK["Packet<br/>(the message)"] --- T["Tail<br/>(e.g. error-detection code)"]
 ```
 
-> **Beyond the slides.** Dolev §3.1 adds how the two kinds of damage are handled. **Corruption**: "Error-detection codes are used to identify and discard corrupted frames", so a corrupted frame simply turns into a lost frame. **Loss**: "Frame retransmission is used to cope with the possibility of frame corruption or loss". The alternating-bit algorithm is one such retransmission strategy. Dolev also defines the job exactly (§2.10): the sender has an input queue of messages im1, im2, ...; the receiver has an output queue om1, om2, ...; the output must always be a **prefix** of the input (no duplicates, no reordering, no omissions), and new messages must be added to the output again and again.
+**Additional context.** Dolev §3.1 adds how the two kinds of damage are handled. **Corruption**: "Error-detection codes are used to identify and discard corrupted frames", so a corrupted frame simply turns into a lost frame. **Loss**: "Frame retransmission is used to cope with the possibility of frame corruption or loss". The alternating-bit algorithm is one such retransmission strategy. Dolev also defines the job exactly (§2.10): the sender has an input queue of messages im1, im2, ...; the receiver has an output queue om1, om2, ...; the output must always be a **prefix** of the input (no duplicates, no reordering, no omissions), and new messages must be added to the output again and again.
 
----
-
-## 3. The alternating-bit algorithm
+### 1.3 The alternating-bit algorithm
 
 The alternating-bit algorithm "is used to cope with possibility of frame corruption or loss". Its one-sentence idea, from the lecture: **"Every message from the sender is repeatedly sent in a frame to the receiver until acknowledges arrives."**
 
-### 3.1 The code
+#### The code
 
 The lecture shows the code side by side. Here it is with the comments in plain words. `im_i` is the i-th input message the sender fetched from its network layer; `om_j` is the j-th output message the receiver delivers.
 
@@ -139,7 +135,7 @@ Sender                                         Receiver
 
 Two lines are the key ones: sender line 12 is where an **acknowledgement** is recognised, and receiver line 15 is where the receiver **sends the acknowledgement**.
 
-### 3.2 What each side does, in words
+#### What each side does, in words
 
 **The sender** keeps one bit, `bits`, starting at 0.
 
@@ -171,13 +167,9 @@ flowchart TB
     C --> A
 ```
 
-> **Kid example.** You give your friend a note with a red sticker. You keep giving the same red note until your friend holds up a red card ("I got the red one"). Then you switch to blue stickers for the next note, and wait for a blue card. If your friend gets a second red note, they know it is a copy: they wave the red card again but do not read it twice.
+**Technical clarification.** In the lecture's receiver code the comparison on line 09 is "FrameBit ≠ bitr" (the ≠ sign is lost when the text is copied, but it is visible in the lecture and in Dolev's Figure 2.14). Also, the counter `j` starts at 1 and is increased **before** `om_j` is written, so taken literally the first delivered message lands in `om_2`. Dolev explains that `i` and `j` "are used only to describe the interface with the network layer"; read line 13 simply as "deliver the next message". Finally, Dolev's chapter 3 text describes the same algorithm with the opposite starting values (`bits = 1`, `bitr = 0`); the lecture follows Dolev's Figure 2.14 (`bits = 0`, `bitr = 1`). Both work, because only "same" or "different" matters.
 
-> **Note on the source.** In the lecture's receiver code the comparison on line 09 is "FrameBit ≠ bitr" (the ≠ sign is lost when the text is copied, but it is visible in the lecture and in Dolev's Figure 2.14). Also, the counter `j` starts at 1 and is increased **before** `om_j` is written, so taken literally the first delivered message lands in `om_2`. Dolev explains that `i` and `j` "are used only to describe the interface with the network layer"; read line 13 simply as "deliver the next message". Finally, Dolev's chapter 3 text describes the same algorithm with the opposite starting values (`bits = 1`, `bitr = 0`); the lecture follows Dolev's Figure 2.14 (`bits = 0`, `bitr = 1`). Both work, because only "same" or "different" matters.
-
----
-
-## 4. A run of the alternating-bit algorithm
+### 1.4 A run of the alternating-bit algorithm
 
 The lecture animates one run. S starts with `bits = 0`, R with `bitR = 1`. Some frames are lost, and one old frame arrives late.
 
@@ -207,13 +199,13 @@ The lecture's labels say "R received m1", "S received ack.", "R received m1 agai
 
 The lecture ends with the key fact: **"Once the sender receives an acknowledgment <1>, no frame with sequence number 0 exists in the system."** This is why one bit is enough: at every moment there are at most two "generations" of frames around, and the bit tells them apart.
 
-> **Beyond the slides.** Why is that fact true? Two reasons that the lecture does not spell out. (1) The links are **FIFO** (Dolev's queues q(s,r) and q(r,s)), so when R received `<m2, 1>`, every older `<m1, 0>` copy ahead of it in the same link had already arrived or been lost; and when S receives `<1>`, every older `<0>` ack ahead of it is gone too. (2) After flipping to 1, S never sends label 0 again until it sees ack 1. Dolev §2.10 turns this into a picture: write down the labels in the order `bits`, q(s,r), `bitr`, q(r,s). In a safe configuration this list looks like 000…111 or 111…000: **one single border** between zeros and ones, which "slides from the sender to the receiver and back to the sender".
+**Additional context.** Why is that fact true? Two reasons that the lecture does not spell out. (1) The links are **FIFO** (Dolev's queues q(s,r) and q(r,s)), so when R received `<m2, 1>`, every older `<m1, 0>` copy ahead of it in the same link had already arrived or been lost; and when S receives `<1>`, every older `<0>` ack ahead of it is gone too. (2) After flipping to 1, S never sends label 0 again until it sees ack 1. Dolev §2.10 turns this into a picture: write down the labels in the order `bits`, q(s,r), `bitr`, q(r,s). In a safe configuration this list looks like 000…111 or 111…000: **one single border** between zeros and ones, which "slides from the sender to the receiver and back to the sender".
 
-> **Beyond the slides.** The alternating-bit algorithm is **not self-stabilizing**. It works only if it starts from the right configuration (bits 0 and 1 and no stray frames). If it starts with garbage, for example several old frames with mixed labels sitting in the links, the receiver can deliver a wrong or duplicate message, because an old frame can carry "the right bit". Dolev shows it is only **pseudo-self-stabilizing**: it can make a bounded number of mistakes and then works forever. This is exactly what an old exam asked (see section 12).
+**Additional context.** The alternating-bit algorithm is **not self-stabilizing**. It works only if it starts from the right configuration (bits 0 and 1 and no stray frames). If it starts with garbage, for example several old frames with mixed labels sitting in the links, the receiver can deliver a wrong or duplicate message, because an old frame can carry "the right bit". Dolev shows it is only **pseudo-self-stabilizing**: it can make a bounded number of mistakes and then works forever. This is exactly what an old exam asked (see section 3.2).
 
----
+## 2. Crashes and the impossibility of initialization
 
-## 5. Theorem: there is no crash-tolerant data-link algorithm
+### 2.1 Theorem: there is no crash-tolerant data-link algorithm
 
 **How a crash is modelled.** "It is usually assumed that a crash causes the sender/receiver to reach an initial state." The crash wipes the processor's memory, and the other side cannot notice it (an **undetectable** crash/resume).
 
@@ -228,21 +220,17 @@ So four ingredients together make it impossible:
 | **Undetectable crash/resume** | After a crash a processor forgets everything, and the other side is not told. |
 | **Frame losses** | The adversary can throw away exactly the frames that would have helped. |
 
-The lecture says "The details are skipped this year". The proof is hidden material, summarised in section 6 †.
+The lecture says "The details are skipped this year". The proof is hidden material, summarised in section 2.2 †.
 
-> **Beyond the slides.** Dolev §3.1 points out which messages are being talked about. A crash right after the sender fetched a message, before sending anything, obviously loses that message, since "no information concerning m is available". That is unavoidable and not the point. The question is only about messages fetched **after the last crash**. One would hope that an initialization procedure (for the alternating bit: set `bits` and `bitr` and make sure no labelled frame is in transit) could guarantee this. Dolev: "Surprisingly, as we now show, no such initialization procedure exists."
+**Additional context.** Dolev §3.1 points out which messages are being talked about. A crash right after the sender fetched a message, before sending anything, obviously loses that message, since "no information concerning m is available". That is unavoidable and not the point. The question is only about messages fetched **after the last crash**. One would hope that an initialization procedure (for the alternating bit: set `bits` and `bitr` and make sure no labelled frame is in transit) could guarantee this. Dolev: "Surprisingly, as we now show, no such initialization procedure exists."
 
-> **Kid example.** Your friend has a mailbox that can hold endless letters. Every time you lose your memory you re-send "letter 1, letter 2, ...", and the old copies pile up. A clever prankster can arrange the pile so that, after your last memory loss, the old replies in the box look exactly like the replies to your new letter. You think your new letter arrived, but it never did.
-
----
-
-## 6. † The pumping technique (the proof)
+### 2.2 † The pumping technique (the proof)
 
 **Notation.** CrashR is a receiver crash, CrashS a sender crash; "CrashX causes X to perform an initialization procedure".
 
 **The reference execution.** Start with both processors crashed and empty links, then let them play a perfect "ping-pong" with no losses:
 
-> RE = CrashS, CrashR, sendS(fs1), receiveR(fs1), sendR(fr1), receiveS(fr1), sendS(fs2), …, receiveS(frk)
+RE = CrashS, CrashR, sendS(fs1), receiveR(fs1), sendR(fr1), receiveS(fr1), sendS(fs2), …, receiveS(frk)
 
 Here fs1, fs2, … are the frames the sender sends and fr1, fr2, … the receiver's answers. The last answer, frk, is the one that **convinces the sender** that its first message arrived, so the sender fetches the next message. The goal: reach a state where "pS is about to send message k and pR expects to receive message k′, such that k ≠ k′", that is, the two sides disagree about which message is current.
 
@@ -276,19 +264,15 @@ flowchart TB
 
 **Conclusions.** "It is possible to show that there is no guarantee that the kth message will be received", for any k. Therefore: "We want to require that eventually every message fetched by the sender reaches the receiver, thus requiring a Self-Stabilizing Data-Link Algorithm."
 
-> **Note on the source.** One explanation in the hidden part is garbled: "it is possible for the network layer to use the services for the data link layer to use the services of the data-link layer". Dolev's sentence is: "it is possible for the network layer to use the services of the data-link layer to deliver several identical messages in a row." That is why the proof may let the sender fetch "several messages that are identical to m" during the replay. (The same part also has the typo "recive".)
+**Technical clarification.** One explanation in the hidden part is garbled: "it is possible for the network layer to use the services for the data link layer to use the services of the data-link layer". Dolev's sentence is: "it is possible for the network layer to use the services of the data-link layer to deliver several identical messages in a row." That is why the proof may let the sender fetch "several messages that are identical to m" during the replay. (The same part also has the typo "recive".)
 
-> **Kid example.** It is like making copies of a key. Every time the guard (the processor) faints and wakes up, he opens the door the same way, and the prankster quietly keeps one more copy of each step. After enough faints the prankster owns the whole sequence of "yes, I got it" answers and can play them back at the right moment.
-
----
-
-## 7. Crashes can create an arbitrary configuration
+### 2.3 Crashes can create an arbitrary configuration
 
 "A combination of: asynchrony, unlimited channel capacity, and undetectable crash-resume fault model with frame losses can bring a system to any arbitrary states of processors and an arbitrary configuration." The lecture says "The details are skipped this year".
 
-This is stronger than section 5. Not only can a message be lost: crashes plus losses can produce **any** combination of processor states and frames in the links. So, from the algorithm's point of view, crashes are as bad as a **transient fault that corrupts memory arbitrarily**.
+This is stronger than section 2.1. Not only can a message be lost: crashes plus losses can produce **any** combination of processor states and frames in the links. So, from the algorithm's point of view, crashes are as bad as a **transient fault that corrupts memory arbitrarily**.
 
-> **Beyond the slides.** "Any" here has a precise meaning in Dolev §3.2: the sender may be in any state it ever had in the reference execution RE, the receiver in any state it ever had in RE, and each link may hold any finite sequence of frames that were sent in RE. Dolev also notes that this happens "even if we assume that no undetected frame corruption is possible": crashes and losses alone are enough.
+**Additional context.** "Any" here has a precise meaning in Dolev §3.2: the sender may be in any state it ever had in the reference execution RE, the receiver in any state it ever had in RE, and each link may hold any finite sequence of frames that were sent in RE. Dolev also notes that this happens "even if we assume that no undetected frame corruption is possible": crashes and losses alone are enough.
 
 **† How it is done (Dolev Figure 3.2).**
 
@@ -296,13 +280,9 @@ This is stronger than section 5. Not only can a message be lost: crashes plus lo
 - **first goal: many copies of RE in a row.** Write FsE for the whole sequence of sender frames in RE (fs1 … fsk) and FrE for the receiver's (fr1 … frk). First pump until FrE sits in q(r,s). Then crash S, let it send fs1, crash it again and let it replay all of RE using the stored FrE. Now q(s,r) holds fs1 followed by FsE. Do the same on the receiver side, and so on. Each round adds one more full copy. Writing F^i_sE for "FsE repeated i times", "for any finite i, the technique can be extended to reach a configuration in which F^i_sE appears in q(s,r)".
 - **second goal: the target configuration ca.** Let k1 and k2 be the number of frames in q(s,r) and q(r,s) in ca, and set **i = k1 + k2 + 2**. Accumulate F^i_sE. Let R replay RE k2 + 1 times, which leaves F^(k1+1)_sE and F^(k2+1)_rE in the links. Then let S replay using the first FrE copy until S reaches its target state, "losing the frames sent by it and the leftovers" of that copy; do the same for R with the first FsE copy. Finally, each remaining copy is used to provide **one** wanted frame of the target link content, and the rest of that copy is lost.
 
-> **Note on the source.** The hidden part writes "loosing the frames"; it means "losing".
+**Technical clarification.** The hidden part writes "loosing the frames"; it means "losing".
 
-> **Kid example.** With enough photocopies of a full deck of cards, you can build any hand you like: take one card from the first copy, throw the rest away; take the next card you want from the second copy; and so on.
-
----
-
-## 8. † A crash-resilient data link when the number of frames is bounded
+### 2.4 † A crash-resilient data link when the number of frames is bounded
 
 The impossibility depends on **unlimited** channel capacity. If we know **bound**, "the maximal number of frames that can be in transit", a crash-resilient algorithm exists. The lecture adds: "Crashes are not considered severe type of faults" (Byzantine faults are worse), and "The algorithm uses the initialization procedure, following the crashes of S and R".
 
@@ -339,13 +319,9 @@ sequenceDiagram
 - from then on, for every y ≥ x, when the first `<ackClean, y>` arrives, the only label in transit is y;
 - `bound + 1` ≥ x always, so after the last step only label `bound + 1` is in transit.
 
-> **Kid example.** A bag can hold at most 5 old notes, and you have 6 colours of paper. At least one colour is surely not in the bag. You try the colours one by one, waiting each time for a reply in the same colour. Once you have done all 6, the bag contains only replies in the 6th colour, so nothing old can fool you any more.
+**Additional context.** Dolev also says a crash-resilient data link exists when "a bound on the transmission time is known": then you can just wait long enough for every old frame to arrive or vanish.
 
-> **Beyond the slides.** Dolev also says a crash-resilient data link exists when "a bound on the transmission time is known": then you can just wait long enough for every old frame to arrive or vanish.
-
----
-
-## 9. † Duplicates after a receiver crash, and exactly-once delivery
+### 2.5 † Duplicates after a receiver crash, and exactly-once delivery
 
 **The problem.** What should R do with its first frame after a crash? First try: when `<msg, FrameBit>` arrives, set `bitR = FrameBit` and deliver msg. "The Problem: extra copy of msg in the output queue." The sender sends the same frame many times, so several copies can sit in the link. R may have delivered msg before the crash, and now delivers the next copy again: a **duplicate**.
 
@@ -370,27 +346,24 @@ stateDiagram-v2
 
 Why it works (Dolev): if S fetches msg after R crashed, a frame `<0, msg>` must reach R before S starts sending `<1, msg>`, so R sees 0 and then 1 and delivers msg. A message is delivered only on a 0-then-1 change, so stale copies of the same label cannot cause a second delivery.
 
-> **Kid example.** Your friend only writes a note into their diary when they first see it on yellow paper and then the same note on green paper. A pile of extra green copies does not count, because they need the yellow-then-green pair.
-
----
-
-## 10. The lesson: why we need self-stabilization
+### 2.6 The lesson: why we need self-stabilization
 
 The chain of reasoning of the chapter:
 
 1. Real links lose frames, and processors crash.
-2. With asynchrony and unlimited capacity, **no initialization procedure** can make a data link reliable after crashes (section 5).
-3. Worse, crashes and losses can push the system into **any configuration** (section 7).
+2. With asynchrony and unlimited capacity, **no initialization procedure** can make a data link reliable after crashes (section 2.1).
+3. Worse, crashes and losses can push the system into **any configuration** (section 2.3).
 4. So "start in a good state and keep it good" cannot work. The only realistic guarantee is: **eventually**, every message fetched by the sender reaches the receiver, starting from any configuration. That is the definition of a **self-stabilizing data-link algorithm**.
 
-> **Beyond the slides.** Dolev ends §3.2 with: "One approach to proving correctness of a distributed algorithm is to show that consistency can be preserved by starting in a consistent configuration (a safe configuration) and proving that any step preserves the consistency. The above technique shows that this approach is doomed to failure when crashes are possible." Dolev §3.3 then answers three "frequently asked questions" about self-stabilization:
-> - **Why may memory be corrupted but not the program?** The program can be reloaded from a safe copy (a disk, or read-only memory); and with a corrupted program you cannot reason about the processor at all.
-> - **Isn't it bad that safety can be violated for a while?** No algorithm can stop bad things after faults that put it in an arbitrary state; a self-stabilizing one at least recovers, while a normal one has no defined behaviour.
-> - **What use is it if a processor never knows the configuration is safe?** If it starts correctly and no fault happens, it is as good as a normal algorithm; after a fault it eventually becomes correct again.
+**Additional context.** Dolev ends §3.2 with: "One approach to proving correctness of a distributed algorithm is to show that consistency can be preserved by starting in a consistent configuration (a safe configuration) and proving that any step preserves the consistency. The above technique shows that this approach is doomed to failure when crashes are possible." Dolev §3.3 then answers three "frequently asked questions" about self-stabilization:
 
----
+- **Why may memory be corrupted but not the program?** The program can be reloaded from a safe copy (a disk, or read-only memory); and with a corrupted program you cannot reason about the processor at all.
+- **Isn't it bad that safety can be violated for a while?** No algorithm can stop bad things after faults that put it in an arbitrary state; a self-stabilizing one at least recovers, while a normal one has no defined behaviour.
+- **What use is it if a processor never knows the configuration is safe?** If it starts correctly and no fault happens, it is as good as a normal algorithm; after a fault it eventually becomes correct again.
 
-## 11. Recap
+## 3. Summary and review
+
+### 3.1 Recap
 
 - The **data-link layer** moves messages between two neighbours over a wire that loses and corrupts frames.
 - The **alternating-bit algorithm** labels messages 0, 1, 0, 1, …; the sender retransmits until the ack with the same bit returns; the receiver delivers only frames whose bit differs from its own. It is correct from a clean start, but **not self-stabilizing**.
@@ -399,30 +372,26 @@ The chain of reasoning of the chapter:
 - † Proofs use the **pumping technique**. † With a known **bound** on frames in transit, the **clean** procedure with bound + 1 labels gives a crash-resilient link; † a 0-then-1 double send gives exactly-once delivery.
 - The conclusion: we need **self-stabilizing** data-link algorithms (next lecture).
 
----
-
-## 12. Old exam questions on this lecture
+### 3.2 Old exam questions on this lecture
 
 Data-link questions appeared in the **Oct 2022** and **2018** exams (true/false items).
 
 **October 2018, Q3c.** *"In the presence of faults (and in the context of asynchronous self-stabilizing networks), it is impossible to design a procedure for initializing a data-link that has an unbounded number of packets that can reside in the link (and sending/receiving buffers)."*
-**TRUE.** This is exactly the theorem of section 5 (Dolev §3.1). A crash-resilient data link exists only when a bound on the frames in transit (or on the transmission time) is known.
+**TRUE.** This is exactly the theorem of section 2.1 (Dolev §3.1). A crash-resilient data link exists only when a bound on the frames in transit (or on the transmission time) is known.
 
 **October 2022, Q1e.** *"There is no self-stabilizing deterministic data-link protocol with bounded memory and bounded message size when channel capacity is unbounded. One way to overcome this is the alternating bit protocol where the sender uses a random bit, 0 or 1, for each new message."*
-**FALSE.** The first sentence is true; the fix is wrong. The randomized solution needs **at least three labels** {0, 1, 2}: after an ack with label L, the sender picks the next label at random among the *other* labels. With only two labels, "pick a different label" is not random at all (after 0 you must take 1), which is just the alternating bit again. (The random-label algorithm is in guide 17.)
+**FALSE.** The first sentence is true; the fix is wrong. The randomized solution needs **at least three labels** {0, 1, 2}: after an ack with label L, the sender picks the next label at random among the *other* labels. With only two labels, "pick a different label" is not random at all (after 0 you must take 1), which is just the alternating bit again. (The random-label algorithm is in guide 13.)
 
 **October 2021, Q1b.** *"End-to-end protocols and link-layer protocols solve different problems using completely different algorithms."*
 **FALSE.** Both give reliable delivery over an unreliable channel, with the same tools: acks, timeouts, retransmission and sequence numbers (alternating bit, stop-and-wait, sliding windows).
 
 **January 2025, Q2a (design question).** The model answer treats a TCP connection as a reliable FIFO channel and uses timeouts plus a fresh three-way handshake as the "reset". It states as an assumption that TCP is not proven self-stabilizing, because of this chapter's result: a deterministic data link with bounded memory cannot be self-stabilizing when channel capacity is unbounded.
 
-> **Kid example (exam tip).** If a true/false sentence combines "crashes" (or "faults"), "asynchronous" and "unbounded" packets in the link with "it is impossible to initialize", the answer is almost always TRUE.
+**Exam tip.** If a true/false sentence combines "crashes" (or "faults"), "asynchronous" and "unbounded" packets in the link with "it is impossible to initialize", the answer is almost always TRUE.
 
----
+### 3.3 Related topics not on these slides
 
-## 13. Related topics not on these slides
-
-This lecture has no pre-lecture quiz of its own. The exam cheat sheet, though, lists three data-link algorithms, and they are taught in the **Model Conversions** lecture (Dolev §4.2). In short (details in guide 17):
+This lecture has no pre-lecture quiz of its own. The exam cheat sheet, though, lists three data-link algorithms, and they are taught in the **Model Conversions** lecture (Dolev §4.2). In short (details in guide 13):
 
 | Cheat sheet | Algorithm | Self-stabilizing? | Memory |
 |---|---|---|---|
@@ -432,3 +401,10 @@ This lecture has no pre-lecture quiz of its own. The exam cheat sheet, though, l
 | Algorithm 9 | **Random labels** from at least 3 values; after label L returns, choose a different label at random | Yes, with probability 1 | bounded |
 
 The safe configuration of the counter algorithm (Dolev Lemma 4.1) is the one where the sender's counter, the receiver's counter and the labels of all messages in transit are all equal.
+
+## Revision notes and references
+
+Technical clarifications, where the lecture material is corrected or made precise, appear in sections [1.3](#13-the-alternating-bit-algorithm), [2.2](#22--the-pumping-technique-the-proof), [2.3](#23-crashes-can-create-an-arbitrary-configuration). Where the slides and the course book differ, this guide follows the book and says so at that point.
+
+- S. Dolev, *Self-Stabilization*, MIT Press, 2000: §3.1 initialization of a data-link algorithm in the presence of faults and §3.2 arbitrary configuration because of crashes.
+- K. A. Bartlett, R. A. Scantlebury and P. T. Wilkinson, "A Note on Reliable Full-Duplex Transmission over Half-Duplex Links", *Communications of the ACM* 12(5), 1969: the alternating-bit protocol.

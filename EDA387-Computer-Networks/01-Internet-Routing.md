@@ -2,17 +2,17 @@
 
 **Course:** EDA387/DIT663 Computer Networks, lecture "Internet Routing (Review)". Part A reviews IP, forwarding and routing (material from the earlier course EDA344); Part B, "Beyond EDA344", covers inter-domain routing and routing security. Many slides are borrowed from Philip Levis and David Mazières; the BGP part is based on a lecture by Rob Sherwood.
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material.
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context that is not in the lecture (general knowledge, or topics that the course's pre-lecture quiz asks about). **Note on the source** marks a place where the lecture is inconsistent or imprecise. **Kid example** retells an idea with an everyday picture. Several parts are marked "self-study" in the lecture; they are included here like everything else.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 ---
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | Adj-RIB-In / Adj-RIB-Out | Adjacent Routing Information Base, incoming / outgoing | BGP's tables of routes learned from neighbours (in) and routes chosen to be advertised to neighbours (out). |
 | Aggregation | — | Advertising one short prefix that covers many longer ones, to keep routing tables small. |
@@ -68,49 +68,37 @@
 | Virtual circuit | — | A path set up before data is sent; packets carry only a short circuit label (connection-oriented). |
 | Wedgie | — | A BGP configuration with more than one stable outcome, which can get "stuck" in the unintended one. |
 
----
+## Contents
 
-## Table of contents
+- [1. The Internet Protocol and the IPv4 packet](#1-the-internet-protocol-and-the-ipv4-packet)
+  - [1.1 The Internet Protocol](#11-the-internet-protocol)
+  - [1.2 The IPv4 header](#12-the-ipv4-header)
+  - [1.3 Fragmentation and reassembly](#13-fragmentation-and-reassembly)
+- [2. IPv4 addressing and address services](#2-ipv4-addressing-and-address-services)
+  - [2.1 IP addresses: classes, subnets and CIDR](#21-ip-addresses-classes-subnets-and-cidr)
+  - [2.2 From IP addresses to hardware addresses: ARP](#22-from-ip-addresses-to-hardware-addresses-arp)
+  - [2.3 ICMP: errors and diagnostics](#23-icmp-errors-and-diagnostics)
+  - [2.4 DHCP: getting an address automatically](#24-dhcp-getting-an-address-automatically)
+- [3. Forwarding, Internet structure and intra-domain routing](#3-forwarding-internet-structure-and-intra-domain-routing)
+  - [3.1 Forwarding, switching and source routing](#31-forwarding-switching-and-source-routing)
+  - [3.2 Internet structure and autonomous systems](#32-internet-structure-and-autonomous-systems)
+  - [3.3 Intra-domain routing: link state and distance vector](#33-intra-domain-routing-link-state-and-distance-vector)
+- [4. Inter-domain routing with BGP](#4-inter-domain-routing-with-bgp)
+  - [4.1 Why a separate inter-domain protocol?](#41-why-a-separate-inter-domain-protocol)
+  - [4.2 BGP basics](#42-bgp-basics)
+  - [4.3 BGP messages, attributes and route selection](#43-bgp-messages-attributes-and-route-selection)
+  - [4.4 AS relationships: customers, providers and peers](#44-as-relationships-customers-providers-and-peers)
+- [5. Routing security and BGP problems](#5-routing-security-and-bgp-problems)
+  - [5.1 Routing security](#51-routing-security)
+  - [5.2 BGP problems: convergence, stability and wedgies](#52-bgp-problems-convergence-stability-and-wedgies)
+- [6. Summary and review](#6-summary-and-review)
+  - [6.1 Summary: Internet design principles](#61-summary-internet-design-principles)
+  - [6.2 Related quiz topics not in the lecture](#62-related-quiz-topics-not-in-the-lecture)
+- [Revision notes and references](#revision-notes-and-references)
 
-**Part A: Review**
+## 1. The Internet Protocol and the IPv4 packet
 
-1. [The Internet Protocol](#1-the-internet-protocol)
-2. [The IPv4 header](#2-the-ipv4-header)
-3. [Fragmentation and reassembly](#3-fragmentation-and-reassembly)
-4. [IP addresses: classes, subnets and CIDR](#4-ip-addresses-classes-subnets-and-cidr)
-5. [From IP addresses to hardware addresses: ARP](#5-from-ip-addresses-to-hardware-addresses-arp)
-6. [ICMP: errors and diagnostics](#6-icmp-errors-and-diagnostics)
-7. [DHCP: getting an address automatically](#7-dhcp-getting-an-address-automatically)
-8. [Forwarding, switching and source routing](#8-forwarding-switching-and-source-routing)
-9. [Internet structure and autonomous systems](#9-internet-structure-and-autonomous-systems)
-10. [Intra-domain routing: link state and distance vector](#10-intra-domain-routing-link-state-and-distance-vector)
-    - [10.1 Routing as a graph problem](#101-routing-as-a-graph-problem)
-    - [10.2 Link state and reliable flooding](#102-link-state-and-reliable-flooding)
-    - [10.3 Dijkstra's shortest-path algorithm †](#103-dijkstras-shortest-path-algorithm-)
-    - [10.4 Distance vector and the Bellman-Ford equation †](#104-distance-vector-and-the-bellman-ford-equation-)
-    - [10.5 Loops and counting to infinity](#105-loops-and-counting-to-infinity)
-    - [10.6 Distance vector versus link state](#106-distance-vector-versus-link-state)
-    - [10.7 RIP †](#107-rip-)
-    - [10.8 OSPF †](#108-ospf-)
-
-**Part B: Beyond EDA344**
-
-11. [Why a separate inter-domain protocol?](#11-why-a-separate-inter-domain-protocol)
-12. [BGP basics](#12-bgp-basics)
-13. [BGP messages, attributes and route selection](#13-bgp-messages-attributes-and-route-selection)
-14. [AS relationships: customers, providers and peers](#14-as-relationships-customers-providers-and-peers)
-15. [Routing security](#15-routing-security)
-16. [BGP problems: convergence, stability and wedgies](#16-bgp-problems-convergence-stability-and-wedgies)
-17. [Summary: Internet design principles](#17-summary-internet-design-principles)
-18. [Related quiz topics not in the lecture](#18-related-quiz-topics-not-in-the-lecture)
-
----
-
-# Part A: Review
-
-The first part reviews ground that the rest of the lecture stands on: addressing, aggregation, autonomous systems and how routes are chosen. It was covered in the introductory course EDA344.
-
-## 1. The Internet Protocol
+### 1.1 The Internet Protocol
 
 **IP's goal is to glue lower-level networks together.** Picture several separate local networks (an Ethernet, a point-to-point link, an FDDI ring) joined by routers. IP lets a host on one of them reach a host on any other, whatever technology each network uses. It does this through:
 
@@ -119,8 +107,6 @@ The first part reviews ground that the rest of the lecture stands on: addressing
 - **Independence from the link layer:** IP sits above the physical and data-link layers, so any network that follows the IP rules can join.
 - **Routing protocols:** routers exchange information about the topology to decide where to send packets.
 - **Fragmentation and reassembly:** IP can cut packets that are too big for a link and rebuild them at the destination.
-
-> **Kid example.** IP is like the address on an envelope. A letter may travel by bicycle in your town, by truck between cities and by plane between countries. Every carrier is different, but each one reads the same address. The local networks are the bicycles, trucks and planes; IP is the address system they all understand.
 
 **The hourglass.** The Internet's protocol stack looks like an hourglass. At the top are many applications (FTP, HTTP, NV for network voice, TFTP). They use the transport protocols TCP and UDP. All of these meet at **one narrow waist: IP**. Below IP fan out many network technologies (NET₁, NET₂, …, NETₙ, such as Ethernet, Wi-Fi or DSL). Because everything passes through IP, applications can be written without caring about the network below, and new networks can be added without changing applications.
 
@@ -165,7 +151,7 @@ block-beta
 
 **IP's service is connectionless and best effort.** IP does not set up a connection; each packet (datagram) is handled on its own. It also does not promise delivery. Packets can be **lost**, **delivered out of order**, **duplicated**, or **delayed for a long time**. Protocols above IP, such as TCP, must add reliability when an application needs it.
 
-## 2. The IPv4 header
+### 1.2 The IPv4 header
 
 Routing is based on the **destination address**. After the IP header comes the **payload**, which usually starts with a TCP or UDP header. The header is drawn in 32-bit rows. The numbers in brackets are field sizes in **bits**; the drawn block widths are only roughly to scale (the DSCP, ECN and flag blocks in particular are not).
 
@@ -197,11 +183,9 @@ Field by field:
 - **Source and destination addresses (32 bits each).**
 - **Options and padding:** rarely used; padding makes the header a multiple of 32 bits. With options, the header can grow from 20 up to 60 bytes.
 
-> **Kid example.** TTL works like a ticket with a fixed number of holes to punch (often 64). Every post office (router) that handles the parcel punches one hole. When no holes are left, the parcel is thrown away. So a parcel that is sent round and round in a circle by mistake cannot travel forever.
-
 You can look at real packets with a packet analyser such as **Wireshark**.
 
-## 3. Fragmentation and reassembly
+### 1.3 Fragmentation and reassembly
 
 Every network has a **maximum transmission unit (MTU)**. When a datagram is larger than the MTU of the next link, it must be **fragmented**. The strategy:
 
@@ -209,8 +193,6 @@ Every network has a **maximum transmission unit (MTU)**. When a datagram is larg
 - **Fragments are self-contained datagrams**, and a fragment can be **fragmented again** further along the path.
 - **Reassembly is delayed until the destination host.** Routers in the middle do not reassemble.
 - **There is no recovery of lost fragments.** If one fragment is lost, the whole packet must be sent again (all fragments).
-
-> **Kid example.** You must push a long letter through a narrow letter slot. You cut it into numbered pieces, write the full address on each piece, and push them through one by one. Only your friend at home (the destination) tapes the pieces back together, using the numbers (the offsets). If one piece gets lost, the whole letter must be sent again.
 
 **The flag bits.**
 
@@ -237,13 +219,13 @@ The 1,400 data bytes fit Ethernet and FDDI, but not PPP, so **R2 must fragment**
 
 The fragments stay separate on the last Ethernet link; only H8 reassembles them. Each fragment gets its own 20-byte IP header, so 512 + 20 = 532 bytes fits the 576-byte PPP MTU.
 
-> **Note on the source.** Also, the default PPP MTU is often 1,500 bytes (about 1,492 bytes of payload in practice). The lecture's example deliberately uses a much smaller PPP MTU of 576 bytes.
+**Technical clarification.** Also, the default PPP MTU is often 1,500 bytes (about 1,492 bytes of payload in practice). The lecture's example deliberately uses a much smaller PPP MTU of 576 bytes.
 
-## 4. IP addresses: classes, subnets and CIDR
+## 2. IPv4 addressing and address services
+
+### 2.1 IP addresses: classes, subnets and CIDR
 
 IP addresses are **globally unique** (or made to seem so) and **hierarchical**: a **network** part plus a **host** part. Grouping addresses this way allows **aggregation**, which saves memory in routers and simplifies routing.
-
-> **Kid example.** An IP address is like "street name + house number". A far-away post office only looks at the street (the network part); only the local postman cares about the house number (the host part). If many streets lie in one district, the far-away office needs just one line in its book, "district X: send north" (aggregation), instead of one line per street.
 
 **Classful addressing (historical).** Originally, the length of the network part was built into the address. You still hear the names:
 
@@ -281,9 +263,9 @@ flowchart LR
 
 **Connectivity rule.** For each destination address a router must either have the **prefix mapped to a next hop** in its forwarding table, or know a **"smarter router"** to send unknown prefixes to (a **default route**). Routers use **longest prefix match**: if several entries match, the one with the longest prefix wins. The default route is the prefix **0.0.0.0/0**, which matches everything but is the least specific. **Core routers know everything and have no default route.**
 
-> **Beyond the slides.** A tiny longest-prefix example: a table has 200.23.16.0/20 → link 1 and 200.23.18.0/23 → link 2. A packet to 200.23.19.5 matches both (it is inside both blocks), and the /23 is longer, so it goes out on link 2. A packet to 200.23.25.1 matches only the /20, so it goes out on link 1.
+**Additional context.** A tiny longest-prefix example: a table has 200.23.16.0/20 → link 1 and 200.23.18.0/23 → link 2. A packet to 200.23.19.5 matches both (it is inside both blocks), and the /23 is longer, so it goes out on link 2. A packet to 200.23.25.1 matches only the /20, so it goes out on link 1.
 
-## 5. From IP addresses to hardware addresses: ARP
+### 2.2 From IP addresses to hardware addresses: ARP
 
 Two kinds of addresses exist at the same time:
 
@@ -299,8 +281,6 @@ A single host can have **several hardware interfaces**, so several link addresse
 3. **Everybody learns** the physical address of the requesting node (because the request was broadcast).
 4. The **target machine responds** with its link-layer address.
 5. **Table entries are discarded if they are not refreshed.**
-
-> **Kid example.** You know a classmate's name (the IP address) but not which desk they sit at (the link address). You shout to the whole class "Who is Sara? I am Tom at desk 3!" (the broadcast request; now everybody knows where Tom sits). Sara answers "I am at desk 7" (the reply). You write it in your notebook (the ARP table), and you rub it out after a while if nobody confirms it again.
 
 **ARP packet for Ethernet and IPv4.** Rows are 32 bits wide; the numbers in brackets are field sizes in bits (block widths roughly to scale).
 
@@ -318,9 +298,9 @@ block-beta
 
 Hardware type 1 means Ethernet; protocol type 0x0800 means IPv4. The operation is 1 for a request and 2 for a reply. In a request, the target hardware address is unknown (it may be all zeros).
 
-> **Note on the source.** The lecture writes "HLen = 48, PLen = 32", which are the address lengths **in bits**. In the actual packet these fields hold the lengths **in bytes**: HLen = 6 for a MAC address and PLen = 4 for an IPv4 address, as the lecture's explanation says.
+**Technical clarification.** The lecture writes "HLen = 48, PLen = 32", which are the address lengths **in bits**. In the actual packet these fields hold the lengths **in bytes**: HLen = 6 for a MAC address and PLen = 4 for an IPv4 address, as the lecture's explanation says.
 
-## 6. ICMP: errors and diagnostics
+### 2.3 ICMP: errors and diagnostics
 
 The **Internet Control Message Protocol** handles error messages, diagnostics and control tasks for IP. Examples:
 
@@ -331,8 +311,6 @@ The **Internet Control Message Protocol** handles error messages, diagnostics an
 - **Checksum failed:** possible data corruption.
 - **Reassembly failed:** for example, missing or corrupted fragments.
 - **Cannot fragment:** a router cannot split a packet to fit the MTU (DF set).
-
-> **Kid example.** Ping is like shouting "Marco!" in a swimming pool and timing how long it takes until someone shouts "Polo!" back. A "destination unreachable" message is like a lifeguard shouting back "Nobody called Polo is in this pool!"
 
 **Many ICMP messages include part of the packet that triggered them.** An ICMP message travels inside an IP packet with protocol = 1:
 
@@ -358,7 +336,7 @@ block-beta
 
 **traceroute versus ping.** *Ping* checks whether a host answers and measures the round-trip time. *Traceroute* (Windows: `tracert`) lists the routers on the path and the round-trip time to each hop; it works by provoking "time exceeded" messages hop by hop. A line showing **"Request timed out"** means that hop did not answer in time. Common reasons: a firewall or filter blocks ICMP, the router is busy or rate-limits ICMP, network configuration or policy, a broken segment, or a misconfigured device. Occasional time-outs are normal; if **every** hop after some point times out, there may be a real problem on the path. Try `tracert google.com` and `ping google.com` yourself.
 
-## 7. DHCP: getting an address automatically
+### 2.4 DHCP: getting an address automatically
 
 Hosts need IP addresses for their interfaces. Assigning them by hand is a pain, so most networks use the **Dynamic Host Configuration Protocol**:
 
@@ -377,8 +355,6 @@ sequenceDiagram
 3. **Request:** the client picks one offer and **broadcasts** a DHCP request.
 4. **Ack:** the chosen server confirms with a DHCP ack.
 
-> **Kid example.** A new child arrives at a summer camp and shouts "Is there a free bed?" (discover). Two leaders answer "Bed 12 is free" and "Bed 5 is free" (offers). The child shouts "I take bed 12 from Ana!" (request; shouted, so that the other leader knows bed 5 is still free for someone else). Ana confirms "Bed 12 is yours for this week" (ack, with a time limit, the lease). Ana also tells the child where the dining hall is (default gateway) and where the information desk is (DNS server).
-
 Besides the address, the server provides:
 
 - the **subnet mask**, so the host can tell whether another host is on the same subnet (talk directly) or not (go through a router);
@@ -393,14 +369,14 @@ Besides the address, the server provides:
 - **reservations:** fixed addresses for devices that need a consistent one, such as printers or servers;
 - **load balancing:** in large networks, several DHCP servers share the work.
 
-## 8. Forwarding, switching and source routing
+## 3. Forwarding, Internet structure and intra-domain routing
+
+### 3.1 Forwarding, switching and source routing
 
 **Forwarding is not routing.**
 
 - **Forwarding** passes packets from an input port to an output port. The router looks up the destination address in its **forwarding table** and finds the out-port, or an ⟨out-port, MAC address⟩ pair.
 - **Routing** figures out the **rules** for that mapping: it is the process of **populating the forwarding tables**. Routers exchange messages about the networks they can reach, with the goal of finding the optimal route to every destination (or a good route, or just any route, depending on scale).
-
-> **Kid example.** Routing is like planning a trip with a big map and writing the directions on a card. Forwarding is glancing at the card at each crossing: "to the station? turn left". Forwarding must be very fast and happens for every packet; routing happens in the background and only changes the card.
 
 IP forwarding works at the **network layer**, not the link layer, so it can forward **between different kinds of networks** (for example Ethernet on one side, a cable-TV wire on the other). It also does required processing on the network-layer header, such as decrementing the TTL.
 
@@ -440,7 +416,7 @@ flowchart TD
 | + Setup is a chance to reserve resources | − The source cannot know whether the network can deliver, or whether the destination is up |
 | + Packets to the same destination can use different circuits | − All packets to one destination may end up on the same route; load balancing needs more complex forwarding and routing |
 
-> **Beyond the slides.** The notes mention two ways datagram networks balance load: **ECMP** (equal-cost multi-path: spread traffic over several equally good paths) and **hash-based** choice of path per flow (so a flow keeps one path and stays in order).
+**Additional context.** The notes mention two ways datagram networks balance load: **ECMP** (equal-cost multi-path: spread traffic over several equally good paths) and **hash-based** choice of path per flow (so a flow keeps one path and stays in order).
 
 **Source routing** is a simple way to do datagram switching: **the sender decides the whole path** and writes it into the packet as a list of output ports. Each switch reads the next port from the list (in the lecture's picture, the header [3, 0, 1] is rotated at each switch as it is used).
 
@@ -449,7 +425,7 @@ flowchart TD
 
 In IPv4, source routing exists as header options: **Loose Source and Record Route (LSRR, option 131 = 0x83)** lists routers that must be visited, not every hop; **Strict Source and Record Route (SSRR, option 137 = 0x89)** gives the exact path. Both carry a list of IP addresses and a pointer to the next one. **In practice source routing is deprecated and blocked** for security and performance reasons.
 
-## 9. Internet structure and autonomous systems
+### 3.2 Internet structure and autonomous systems
 
 **The Internet today** has **multiple backbones** run by backbone service providers, joined at **peering points**. Large corporations connect directly to backbone providers; "consumer" ISPs and small corporations connect through them. CAIDA's "IPv4 and IPv6 AS Core" pictures show the ASes by location, their customer-cone sizes and links; from 2017 to 2020 the customer cones of the largest ASes grew. (An AS's **customer cone** is the set of ASes it can reach by going down through customers.)
 
@@ -457,8 +433,6 @@ In IPv4, source routing exists as header options: **Loose Source and Record Rout
 
 - choose **their own local routing algorithm**, and
 - set **policies about non-local routing**.
-
-> **Kid example.** Each AS is like a country with its own road rules inside. How a country organizes its own roads is its own business. At the borders, countries make agreements about whose traffic they let through, and those agreements are about business and politics, not about the shortest road. Inside: link state or distance vector. Between ASes: BGP.
 
 Each AS is given a unique AS number (originally 16 bits; later extended to 32 bits).
 
@@ -487,9 +461,9 @@ flowchart LR
 
 **Intra-domain routing** happens under a single administrative control, so **optimality is important**. Between ASes, **policy dominates** (see Part B).
 
-## 10. Intra-domain routing: link state and distance vector
+### 3.3 Intra-domain routing: link state and distance vector
 
-### 10.1 Routing as a graph problem
+#### Routing as a graph problem
 
 Properties of routing algorithms:
 
@@ -507,7 +481,7 @@ The two classes of intra-domain algorithms:
 | Requires global state (OSPF reduces this with areas) | Can suffer from loops |
 | Example: OSPF | Example: RIP |
 
-### 10.2 Link state and reliable flooding
+#### Link state and reliable flooding
 
 **Strategy:** send information **to all nodes** (not just neighbours), but only about **directly connected links** (not the whole routing table). Each router builds the full map from everybody's pieces.
 
@@ -528,7 +502,7 @@ A **Link State Packet (LSP)** contains:
 
 The best path is then calculated with **Dijkstra's shortest-path algorithm**.
 
-### 10.3 Dijkstra's shortest-path algorithm †
+#### Dijkstra's shortest-path algorithm †
 
 **Graph abstraction.** *G* = (*N*, *E*), with routers *N* = {u, v, w, x, y, z}. *c*₍ₐ,ᵦ₎ is the cost of the direct link between *a* and *b*, for example *c*(w,z) = 5, and *c*(u,z) = ∞ because u and z are not directly connected. The operator defines costs: always 1, or inversely related to bandwidth, or related to congestion or delay.
 
@@ -546,7 +520,7 @@ flowchart LR
     y ---|2| z
 ```
 
-> **Note on the source.** The lecture's list of links *E* leaves out (u, w), although its picture (and the Dijkstra table, where D(w) starts at 5 via u) contains a u–w link of cost 5. The diagram above follows the picture.
+**Technical clarification.** The lecture's list of links *E* leaves out (u, w), although its picture (and the Dijkstra table, where D(w) starts at 5 via u) contains a u–w link of cost 5. The diagram above follows the picture.
 
 Dijkstra's algorithm is **global**: all nodes know the topology and link costs (thanks to the link-state broadcast), so all have the same information. It computes least-cost paths from one **source** to all other nodes, giving that node's forwarding table. It is **iterative**: after *k* iterations, the least-cost paths to *k* destinations are known.
 
@@ -583,7 +557,7 @@ Each row shows the estimates **after** the node named last in N′ was added; th
 
 **Result.** Trace the predecessors back to build the **least-cost-path tree** from u, then the **forwarding table**: to reach **v**, use link **(u, v)**; to reach **every other destination** (x, y, w, z), use link **(u, x)**.
 
-### 10.4 Distance vector and the Bellman-Ford equation †
+#### Distance vector and the Bellman-Ford equation †
 
 **Distance vector** is a **distributed** routing algorithm.
 
@@ -615,7 +589,7 @@ Each node loops: **wait** (for a link-cost change or a message) → **recompute*
 
 After the exchanges settle, all three tables agree: from x (0, 2, 3), from y (2, 0, 1), from z (3, 1, 0). The direct x–z link of cost 7 is never used, because going through y costs only 3.
 
-### 10.5 Loops and counting to infinity
+#### Loops and counting to infinity
 
 Distance vector uses only **local information**, which makes it vulnerable to loops. The lecture's example network has the links A–B, A–C, A–E, A–F, B–C, C–D, D–G and F–G.
 
@@ -639,8 +613,6 @@ flowchart LR
 4. A decides it can reach E in **4** hops (through B) and advertises this to C.
 5. C decides it can reach E in **5** hops… and so on, upward forever.
 
-> **Kid example.** E has moved away, but nobody knows it yet. A asks B and C: "Do you know how far E is?" B says "3, via C", A then says "4, via B", C says "5, via A"... Each one repeats the old rumour from the others and adds one, so the number keeps growing. Split horizon is the rule "never tell a friend the news that you learned from that same friend".
-
 **How to avoid loops.**
 
 - The **IP TTL** field stops a packet from living forever, but it **does not break or repair** the routing loop.
@@ -648,7 +620,7 @@ flowchart LR
 - **Split horizon:** when sending updates to node A, **do not include destinations you route to through A**. In the example, this stops B and C from sending cost 2 to A.
 - **Split horizon with poison reverse:** when sending updates to A, **explicitly include a very high cost ("poison", ∞)** for destinations you route through A. The poison reverse example in the lecture: B tells C "E: 2", so C records "B says E is at 2"; after the failure B's advertisement becomes "E: ∞", and C records "B says E is at ∞".
 
-> **Beyond the slides: when does poison reverse help?** It prevents loops between **two** neighbours (B will never route to E through A while A routes through B). It does **not** prevent loops through **three or more** routers. In the triangle A–B–C above, C can still offer B a route to E that secretly goes through A, and the three can still count to infinity until the bound (such as 16) is reached.
+**Additional context : when does poison reverse help?.** It prevents loops between **two** neighbours (B will never route to E through A while A routes through B). It does **not** prevent loops through **three or more** routers. In the triangle A–B–C above, C can still offer B a route to E that secretly goes through A, and the three can still count to infinity until the bound (such as 16) is reached.
 
 **Adapting to failures (another example on the same graph).** The link F–G fails.
 
@@ -660,15 +632,15 @@ flowchart LR
 
 Here the network finds the new correct route quickly because a real alternative exists.
 
-### 10.6 Distance vector versus link state
+#### Distance vector versus link state
 
 - **Number of messages:** LS needs **O(*n* · *d*)** for *n* nodes. DV's convergence time varies but is **Ω(*d*)**.
 - **Rounds until convergence:** LS **O(*n*²)**. DV **could count all the way to ∞** if a loop exists. The course later studies a **self-stabilizing version that takes only Θ(*d*) rounds**.
 - **Robustness to a malfunctioning router:** in LS a node can advertise an incorrect **link** cost; in DV a node can advertise an incorrect **path** cost, and because others use these costs, **errors propagate through the network**.
 
-> **Note on the source.** The lecture defines *d* as "the number of neighbours of a node", while the lecture's explanation calls *d* "the network diameter". For the self-stabilizing Θ(*d*) bound, the diameter reading fits what the course shows later (the self-stabilizing BFS spanning-tree algorithm stabilizes in a number of cycles proportional to the diameter).
+**Technical clarification.** The lecture defines *d* as "the number of neighbours of a node", while the lecture's explanation calls *d* "the network diameter". For the self-stabilizing Θ(*d*) bound, the diameter reading fits what the course shows later (the self-stabilizing BFS spanning-tree algorithm stabilizes in a number of cycles proportional to the diameter).
 
-### 10.7 RIP †
+#### RIP †
 
 **Intra-domain routing protocols:** **RIP** (Routing Information Protocol) is a fairly simple implementation of DV, specified in **RFC 2453** (38 pages), and was **made self-stabilizing by Radia Perlman**. **OSPF** (Open Shortest Path First) is a more complex link-state protocol that adds **areas** for scalability (RFC 2328).
 
@@ -705,7 +677,7 @@ block-beta
 - The **next hop** lets one router advertise routes on behalf of several routers on the same subnet, and can redirect a RIP neighbour to a better path.
 - The **metric** is the hop count.
 
-### 10.8 OSPF †
+#### OSPF †
 
 **OSPFv2 [RFC 2328]:** a link-state protocol (RFC 2328 is 244 pages) that
 
@@ -801,7 +773,9 @@ sequenceDiagram
 
 From here on the material is new compared with the introductory course: **inter-domain routing and routing security** (RPKI, ROV, ASPA and BGP pathologies).
 
-## 11. Why a separate inter-domain protocol?
+## 4. Inter-domain routing with BGP
+
+### 4.1 Why a separate inter-domain protocol?
 
 Why not use OSPF everywhere, for example with hierarchies of OSPF areas? **Scaling is not the only limitation.**
 
@@ -821,7 +795,7 @@ Why not use OSPF everywhere, for example with hierarchies of OSPF areas? **Scali
 - Latest BGPv4 specification: [RFC 4271]
 - More: application of BGP in the Internet [RFC 1772], experience with BGPv4 [RFC 1773], protocol analysis [RFC 1774].
 
-## 12. BGP basics
+### 4.2 BGP basics
 
 **High-level view.**
 
@@ -867,7 +841,7 @@ Arrows point from customer to provider.
 - `curl -s https://ipinfo.io/json` shows which AS you are in right now.
 - Expect **AS2841 → AS1653 → AS2842**. Hops showing `* * *` are **ICMP filtering, not failure**. A short path to a large site means **peering, not proximity**. Adding `-6` traces over IPv6, and the path may differ.
 
-## 13. BGP messages, attributes and route selection
+### 4.3 BGP messages, attributes and route selection
 
 **Protocol details.** Border routers connect over **TCP port 179** and exchange messages in both directions over a long-lived connection. The base protocol has **four message types**:
 
@@ -899,7 +873,7 @@ Extensions can add more types, for example ROUTE-REFRESH [RFC 2918].
 9. Prefer the route with the **lowest cost to the egress point** ("hot-potato routing").
 10. **Tie-breaking rules**, for example the lowest router ID or the oldest route.
 
-> **Note on the source.** The lecture explains hot-potato routing as "packet routing without storing packets in buffers". That is the meaning of the term in switch design (deflection routing). In BGP route selection, hot-potato routing means **handing traffic to the nearest exit point of your own AS**, getting rid of it as quickly as possible, which is what "lowest cost to egress point" expresses.
+**Technical clarification.** The lecture explains hot-potato routing as "packet routing without storing packets in buffers". That is the meaning of the term in switch design (deflection routing). In BGP route selection, hot-potato routing means **handing traffic to the nearest exit point of your own AS**, getting rid of it as quickly as possible, which is what "lowest cost to egress point" expresses.
 
 **External versus internal BGP.** With only one router per AS, every BGP session is between ASes (**eBGP**). Real ASes have **multiple peering points** and several border routers. **iBGP** runs between routers of the same AS to keep the AS consistent, so that all its border routers agree on the routes learned from outside.
 
@@ -915,19 +889,19 @@ flowchart LR
     R2b ---|"eBGP"| R3b
 ```
 
-## 14. AS relationships: customers, providers and peers
+### 4.4 AS relationships: customers, providers and peers
 
 **Customer/provider.** **Customers pay for connectivity**, for example Stanford pays Cogent. The customer is a stub, the provider a transit AS. The amount and cost structure vary wildly. Many customers are **multi-homed** (Stanford also connects to CalREN/Internet2). **Typical policy: prefer routes learned from customers** (they bring in money).
 
 **Peers** agree to **exchange traffic for free**, with penalties or renegotiation if the traffic becomes unbalanced. **Tier-1 ISPs have no default route: they all peer with each other.** You are **Tier *i* + 1** if you have a default route to a Tier *i* provider.
 
-> **Kid example.** Think of shops and delivery companies. A customer pays a provider to carry its parcels everywhere. Two companies of the same size may agree to carry each other's parcels for free (peering). But no company carries parcels for free between two other companies that do not pay it.
-
-> **Beyond the slides: the valley-free rule.** From these relationships follows the rule the lecture uses later: **a route learned from a provider or a peer is advertised only to customers**, never to another provider or peer. A legitimate AS path therefore climbs up through providers, crosses at most one peer link at the top, and then goes down through customers; it never climbs again after going down (no "valley"). Advertising more widely would mean offering free transit.
+**Additional context : the valley-free rule.** From these relationships follows the rule the lecture uses later: **a route learned from a provider or a peer is advertised only to customers**, never to another provider or peer. A legitimate AS path therefore climbs up through providers, crosses at most one peer link at the top, and then goes down through customers; it never climbs again after going down (no "valley"). Advertising more widely would mean offering free transit.
 
 **BGP relationship drama: Cogent versus Level3 (self-study).** Level3 and Cogent were peers. In 2005 Level3 decided to start charging Cogent; Cogent said no. The result was an **Internet partition**: Cogent's customers could not reach Level3's customers and vice versa, and other ISPs were affected too. Three weeks later they reached a new, undisclosed agreement.
 
-## 15. Routing security
+## 5. Routing security and BGP problems
+
+### 5.1 Routing security
 
 **BGP trusts everyone.** BGP has **no native origin authentication**: **any AS can announce any prefix**, and its neighbours have no protocol-level way to check. This was a design-era assumption, not a bug: the original operators knew each other personally and fixed mistakes by telephone. **Everything that follows is retrofitted** onto a protocol that assumes cooperation. (DNS has the same story, as the next lecture shows.)
 
@@ -939,13 +913,11 @@ flowchart LR
 4. **The more specific prefix wins** (longest prefix match, before any policy comparison), so routers everywhere sent YouTube traffic to Pakistan Telecom. **YouTube was unreachable worldwide for about two hours.**
 5. **No component failed.** Every router did exactly what BGP specifies. **Correctness of each participant does not imply correctness of the system.**
 
-> **Kid example.** Two signposts stand at a crossing. One says "Everything on Long Street: this way" (the /22). A prankster adds a second sign: "Long Street numbers 100 to 199: that way" (the /24). Drivers always follow the **more detailed** sign, so everyone heading for those houses drove the wrong way. Every driver followed the rules perfectly; the trouble was a wrong sign.
-
 *Check yourself (from the lecture):* if Pakistan Telecom had announced the same /22 instead of a /24, would the outcome have been the same? (Hint: with equal prefix lengths, BGP's route selection, such as AS-path length and local policy, decides, so only part of the Internet would have chosen the false route.)
 
 † An older, archived version of the lecture tells the same story with different details: the Pakistani ISP **PieNET** advertised **208.65.152.0/23 and 208.65.152.128/23**, and it adds that spammers steal unused IP space to hide (Feamster), asks why someone would advertise very short prefixes, and says that secure BGP is "in the works".
 
-> **Note on the source.** The two YouTube versions disagree. The visible version (Pakistan Telecom announcing 208.65.153.0/24) matches the well-documented account of the incident. The archived version's "208.65.152.128/23" cannot be a valid /23 block (a /23 must start at an even third octet with .0), so treat the visible version as correct.
+**Technical clarification.** The two YouTube versions disagree. The visible version (Pakistan Telecom announcing 208.65.153.0/24) matches the well-documented account of the incident. The archived version's "208.65.152.128/23" cannot be a valid /23 block (a /23 must start at an even third octet with .0), so treat the visible version as correct.
 
 **Hijacks are not the only failure: route leaks.**
 
@@ -1004,7 +976,7 @@ ASPA is at "available"; RPKI origin validation is between available and adopted 
 
 **Partial deployment is its own problem.** What happens in an Internet where **12 % validate and 88 % do not**? Neither the "no deployment" nor the "full deployment" analysis applies. A hijacked route is dropped by validating ASes and accepted by the rest, so the same prefix is **reachable from some places and hijacked from others**, depending on topology (who your neighbours are) rather than on adoption counts. Dropping invalid routes also shifts traffic paths in ways nobody planned. **Security mechanisms have their own convergence properties**: a security mechanism is a distributed system in its own right.
 
-## 16. BGP problems: convergence, stability and wedgies
+### 5.2 BGP problems: convergence, stability and wedgies
 
 BGP's problems and the usual responses:
 
@@ -1048,7 +1020,9 @@ The story, step by step (the AS paths are the announcements shown in the lecture
 
 **"Converged to what?"** BGP converges, and the wedgie converged too, **to a state nobody wanted**. Every participant behaved correctly, yet there is no path back without a human, because **the protocol has no notion of a legitimate configuration to return to**. The lecture ends with an open question: *what would a protocol need in order to leave a bad state on its own?* This is the thesis of the second half of the course, **self-stabilization**.
 
-## 17. Summary: Internet design principles
+## 6. Summary and review
+
+### 6.1 Summary: Internet design principles
 
 - **End-to-end principle:** a dumb core with a smart edge; important functions live at the endpoints.
 - **Layering:** functionality is split into layers with clear responsibilities.
@@ -1062,16 +1036,26 @@ The story, step by step (the AS paths are the announcements shown in the lecture
 - **Public network:** open to anyone with the equipment and connectivity.
 - **Evolutionary development:** the Internet is designed to keep evolving.
 
-## 18. Related quiz topics not in the lecture
+### 6.2 Related quiz topics not in the lecture
 
-> **Beyond the slides.** The course's pre-lecture quiz for this lecture also asks about the following. These one-line explanations are general networking knowledge, matching the answers the quiz accepts.
->
-> - **NAT (network address translation)** lets many hosts with private addresses share one public address, which saves IPv4 addresses but **complicates inbound connections** and **breaks the end-to-end principle** (it rewrites source IP addresses and ports). When a NAT runs out of ports, new outbound connections fail or ports are reused. **STUN** lets peers behind NATs learn their public address and port, but fails with **symmetric NATs**.
-> - **Switching fabrics:** a **crossbar** switch offers the highest aggregate throughput and low contention, but becomes costly as the port count grows.
-> - **Forwarding-table lookup:** **tries** are software-friendly but slower for longest prefix match than **TCAMs** (special hardware memory).
-> - **Routing versus forwarding** is the separation of the **control plane** (computing tables) from the **data plane** (per-packet lookups).
-> - **iBGP** does not pass on routes learned from another iBGP peer, so it needs a **full mesh** or **route reflectors**; route reflectors can cause suboptimal or asymmetric paths.
-> - **BGP convergence** is slow partly because of **path exploration**: after a failure, routers briefly accept and then withdraw several invalid alternative paths. Policies and filters also delay propagation.
-> - **AS-path prepending** lets a multihomed AS make one entry path less attractive, to influence incoming traffic. **Export filters** control which routes are advertised to which neighbours, enforcing business relationships; overly permissive export policies can turn an AS into unwanted transit.
-> - **ECMP** spreads traffic over equal-cost paths by hashing flows, which can be uneven when many flows hash to the same path.
-> - **IP anycast** (one address announced from many places) sends clients to a nearby DNS root-server instance without client changes, but different clients may reach different replicas.
+**Additional context.** The course's pre-lecture quiz for this lecture also asks about the following. These one-line explanations are general networking knowledge, matching the answers the quiz accepts.
+
+- **NAT (network address translation)** lets many hosts with private addresses share one public address, which saves IPv4 addresses but **complicates inbound connections** and **breaks the end-to-end principle** (it rewrites source IP addresses and ports). When a NAT runs out of ports, new outbound connections fail or ports are reused. **STUN** lets peers behind NATs learn their public address and port, but fails with **symmetric NATs**.
+- **Switching fabrics:** a **crossbar** switch offers the highest aggregate throughput and low contention, but becomes costly as the port count grows.
+- **Forwarding-table lookup:** **tries** are software-friendly but slower for longest prefix match than **TCAMs** (special hardware memory).
+- **Routing versus forwarding** is the separation of the **control plane** (computing tables) from the **data plane** (per-packet lookups).
+- **iBGP** does not pass on routes learned from another iBGP peer, so it needs a **full mesh** or **route reflectors**; route reflectors can cause suboptimal or asymmetric paths.
+- **BGP convergence** is slow partly because of **path exploration**: after a failure, routers briefly accept and then withdraw several invalid alternative paths. Policies and filters also delay propagation.
+- **AS-path prepending** lets a multihomed AS make one entry path less attractive, to influence incoming traffic. **Export filters** control which routes are advertised to which neighbours, enforcing business relationships; overly permissive export policies can turn an AS into unwanted transit.
+- **ECMP** spreads traffic over equal-cost paths by hashing flows, which can be uneven when many flows hash to the same path.
+- **IP anycast** (one address announced from many places) sends clients to a nearby DNS root-server instance without client changes, but different clients may reach different replicas.
+
+## Revision notes and references
+
+Technical clarifications, where the lecture material is corrected or made precise, appear in sections [1.3](#13-fragmentation-and-reassembly), [2.2](#22-from-ip-addresses-to-hardware-addresses-arp), [3.3](#33-intra-domain-routing-link-state-and-distance-vector), [4.3](#43-bgp-messages-attributes-and-route-selection), [5.1](#51-routing-security). Where the slides and the course book differ, this guide follows the book and says so at that point.
+
+- J. Kurose and K. Ross, *Computer Networking: A Top-Down Approach*: network layer and routing chapters.
+- [RFC 791 — Internet Protocol](https://www.rfc-editor.org/rfc/rfc791) and [RFC 792 — ICMP](https://www.rfc-editor.org/rfc/rfc792): the IPv4 header, fragmentation and error messages.
+- [RFC 826 — ARP](https://www.rfc-editor.org/rfc/rfc826), [RFC 2131 — DHCP](https://www.rfc-editor.org/rfc/rfc2131) and [RFC 4632 — CIDR](https://www.rfc-editor.org/rfc/rfc4632): address resolution, configuration and classless addressing.
+- [RFC 2453 — RIP version 2](https://www.rfc-editor.org/rfc/rfc2453) and [RFC 2328 — OSPF version 2](https://www.rfc-editor.org/rfc/rfc2328): distance-vector and link-state intra-domain routing.
+- [RFC 4271 — BGP-4](https://www.rfc-editor.org/rfc/rfc4271) and [RFC 6811 — BGP prefix origin validation](https://www.rfc-editor.org/rfc/rfc6811): inter-domain routing and route origin validation (ROV).

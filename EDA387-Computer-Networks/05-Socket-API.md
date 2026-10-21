@@ -2,11 +2,11 @@
 
 **Course:** EDA387/DIT661 Computer Networks, "Socket API" (three lecture sessions plus self-study material). Session one builds a working client and server and explains why the interface looks the way it does. Session two goes through the elementary calls and addresses. Session three is about many clients at once, attacks on servers, scaling to ten thousand connections and more, and what people build on top of sockets. The code comes from W. Richard Stevens, *UNIX Network Programming*. About two thirds of the material is marked **Self-study**; it is "not filler and not optional", so it is included here like everything else.
 
-**Generated:** 2026-10-21
+**Revised:** 21 October 2026
 
-**† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. In this lecture the hidden material is the three self-assessment checklists (section 43) and part of the discussion of TIME_WAIT (section 16). Text from them is marked with †.
+**† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. In this lecture the hidden material is the three self-assessment checklists (section 8.2) and part of the discussion of TIME_WAIT (section 3.4). Text from them is marked with †.
 
-**How to read the boxes.** Text that starts with **Beyond the slides** adds context that is not in the lecture (general knowledge, old exam questions, or topics that the course's Socket API quiz asks about). **Note on the source** marks a place where the lecture material is wrong, inconsistent or incomplete. **Kid example** retells an idea with an everyday picture.
+**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
 
 **No programming knowledge needed.** The lecture contains C code. Every piece of code below is explained line by line in plain words, so you can follow the ideas even if you have never programmed. A "function" is a named command (like `connect`) that a program can call; the values in brackets are what you give it; it hands back a "return value".
 
@@ -14,7 +14,7 @@
 
 ## Glossary
 
-| Term | Full name | Meaning |
+| Term | Expansion or category | Meaning |
 |---|---|---|
 | Active close | — | The side that calls `close` first; it sends the first FIN and later sits in TIME_WAIT. |
 | Active open | — | The client side of opening a connection: calling `connect`, which sends a SYN. |
@@ -75,59 +75,66 @@
 | XDP / eBPF | eXpress Data Path / extended Berkeley Packet Filter | Small, kernel-verified programs that handle packets inside the network driver. |
 | ZeroMQ | — | A messaging library that sends whole messages and hides the byte-stream problem. |
 
----
+## Contents
 
-## Table of contents
+- [1. The client-server model and the socket interface](#1-the-client-server-model-and-the-socket-interface)
+  - [1.1 What this block is about](#11-what-this-block-is-about)
+  - [1.2 The layers below your program](#12-the-layers-below-your-program)
+  - [1.3 Connections, socket addresses and the four-tuple](#13-connections-socket-addresses-and-the-four-tuple)
+  - [1.4 Clients, servers and ports](#14-clients-servers-and-ports)
+  - [1.5 What a socket is](#15-what-a-socket-is)
+  - [1.6 The map of the socket calls](#16-the-map-of-the-socket-calls)
+  - [1.7 Where sockets came from: BSD history](#17-where-sockets-came-from-bsd-history)
+- [2. A first client and server](#2-a-first-client-and-server)
+  - [2.1 The daytime client](#21-the-daytime-client)
+  - [2.2 TCP is a byte stream](#22-tcp-is-a-byte-stream)
+  - [2.3 Error handling with wrapper functions](#23-error-handling-with-wrapper-functions)
+  - [2.4 The daytime server](#24-the-daytime-server)
+  - [2.5 Iterative servers](#25-iterative-servers)
+- [3. TCP connection establishment, termination and ports](#3-tcp-connection-establishment-termination-and-ports)
+  - [3.1 The three-way handshake](#31-the-three-way-handshake)
+  - [3.2 Closing a connection and the half-close](#32-closing-a-connection-and-the-half-close)
+  - [3.3 The TCP state transition diagram](#33-the-tcp-state-transition-diagram)
+  - [3.4 TIME_WAIT](#34-time_wait)
+  - [3.5 Port number ranges and ephemeral ports](#35-port-number-ranges-and-ephemeral-ports)
+  - [3.6 Many connections on one port](#36-many-connections-on-one-port)
+- [4. Byte order, addresses and address structures](#4-byte-order-addresses-and-address-structures)
+  - [4.1 Byte ordering](#41-byte-ordering)
+  - [4.2 IP addresses and names](#42-ip-addresses-and-names)
+  - [4.3 Socket address structures](#43-socket-address-structures)
+  - [4.4 Converting addresses between text and binary](#44-converting-addresses-between-text-and-binary)
+- [5. Robust I/O and the elementary socket calls](#5-robust-io-and-the-elementary-socket-calls)
+  - [5.1 Short reads and writes: readn, writen and readline](#51-short-reads-and-writes-readn-writen-and-readline)
+  - [5.2 The socket function](#52-the-socket-function)
+  - [5.3 The connect function](#53-the-connect-function)
+  - [5.4 The bind function](#54-the-bind-function)
+  - [5.5 The listen function and its two queues](#55-the-listen-function-and-its-two-queues)
+  - [5.6 The accept function](#56-the-accept-function)
+  - [5.7 The close function](#57-the-close-function)
+- [6. The echo service, I/O models and select](#6-the-echo-service-io-models-and-select)
+  - [6.1 The echo client and server](#61-the-echo-client-and-server)
+  - [6.2 I/O models](#62-io-models)
+  - [6.3 The select function](#63-the-select-function)
+  - [6.4 The echo client with select](#64-the-echo-client-with-select)
+  - [6.5 Batch input: stop-and-wait is slow](#65-batch-input-stop-and-wait-is-slow)
+  - [6.6 The batch-mode bug and shutdown](#66-the-batch-mode-bug-and-shutdown)
+  - [6.7 An echo server built on select](#67-an-echo-server-built-on-select)
+- [7. Robust and scalable servers](#7-robust-and-scalable-servers)
+  - [7.1 Denial of service and robust servers](#71-denial-of-service-and-robust-servers)
+  - [7.2 Debugging and testing tools](#72-debugging-and-testing-tools)
+  - [7.3 Kinds of servers](#73-kinds-of-servers)
+  - [7.4 C10K and C10M](#74-c10k-and-c10m)
+  - [7.5 Above the socket: messaging libraries](#75-above-the-socket-messaging-libraries)
+- [8. Summary and review](#8-summary-and-review)
+  - [8.1 Summary](#81-summary)
+  - [8.2 Self-assessment checklists †](#82-self-assessment-checklists-)
+  - [8.3 Old exam questions on sockets](#83-old-exam-questions-on-sockets)
+  - [8.4 Related quiz topics not in the lectures](#84-related-quiz-topics-not-in-the-lectures)
+- [Revision notes and references](#revision-notes-and-references)
 
-- [1. What this block is about](#1-what-this-block-is-about)
-- [2. The layers below your program](#2-the-layers-below-your-program)
-- [3. Connections, socket addresses and the four-tuple](#3-connections-socket-addresses-and-the-four-tuple)
-- [4. Clients, servers and ports](#4-clients-servers-and-ports)
-- [5. What a socket is](#5-what-a-socket-is)
-- [6. The map of the socket calls](#6-the-map-of-the-socket-calls)
-- [7. Where sockets came from: BSD history](#7-where-sockets-came-from-bsd-history)
-- [8. The daytime client](#8-the-daytime-client)
-- [9. TCP is a byte stream](#9-tcp-is-a-byte-stream)
-- [10. Error handling with wrapper functions](#10-error-handling-with-wrapper-functions)
-- [11. The daytime server](#11-the-daytime-server)
-- [12. Iterative servers](#12-iterative-servers)
-- [13. The three-way handshake](#13-the-three-way-handshake)
-- [14. Closing a connection and the half-close](#14-closing-a-connection-and-the-half-close)
-- [15. The TCP state transition diagram](#15-the-tcp-state-transition-diagram)
-- [16. TIME_WAIT](#16-time_wait)
-- [17. Port number ranges and ephemeral ports](#17-port-number-ranges-and-ephemeral-ports)
-- [18. Many connections on one port](#18-many-connections-on-one-port)
-- [19. Byte ordering](#19-byte-ordering)
-- [20. IP addresses and names](#20-ip-addresses-and-names)
-- [21. Socket address structures](#21-socket-address-structures)
-- [22. Converting addresses between text and binary](#22-converting-addresses-between-text-and-binary)
-- [23. Short reads and writes: readn, writen and readline](#23-short-reads-and-writes-readn-writen-and-readline)
-- [24. The socket function](#24-the-socket-function)
-- [25. The connect function](#25-the-connect-function)
-- [26. The bind function](#26-the-bind-function)
-- [27. The listen function and its two queues](#27-the-listen-function-and-its-two-queues)
-- [28. The accept function](#28-the-accept-function)
-- [29. The close function](#29-the-close-function)
-- [30. The echo client and server](#30-the-echo-client-and-server)
-- [31. I/O models](#31-io-models)
-- [32. The select function](#32-the-select-function)
-- [33. The echo client with select](#33-the-echo-client-with-select)
-- [34. Batch input: stop-and-wait is slow](#34-batch-input-stop-and-wait-is-slow)
-- [35. The batch-mode bug and shutdown](#35-the-batch-mode-bug-and-shutdown)
-- [36. An echo server built on select](#36-an-echo-server-built-on-select)
-- [37. Denial of service and robust servers](#37-denial-of-service-and-robust-servers)
-- [38. Debugging and testing tools](#38-debugging-and-testing-tools)
-- [39. Kinds of servers](#39-kinds-of-servers)
-- [40. C10K and C10M](#40-c10k-and-c10m)
-- [41. Above the socket: messaging libraries](#41-above-the-socket-messaging-libraries)
-- [42. Summary](#42-summary)
-- [43. Self-assessment checklists †](#43-self-assessment-checklists-)
-- [44. Old exam questions on sockets](#44-old-exam-questions-on-sockets)
-- [45. Related quiz topics not in the lectures](#45-related-quiz-topics-not-in-the-lectures)
+## 1. The client-server model and the socket interface
 
----
-
-## 1. What this block is about
+### 1.1 What this block is about
 
 This block is about programming **processes** (running programs) that talk to each other through an application programming interface called **sockets**. Some students know sockets already, because "that model has become synonymous with network programming"; others start from zero.
 
@@ -137,15 +144,11 @@ The aims:
 - be able to **explain in detail** how the networking parts of a system work and **how to program them**;
 - learn through **code examples**, with the usual split into a **client** and a **server**, and write small TCP client-server programs.
 
-The lecturer's advice: "If you take one thing from this session, make it the ability to write" the daytime client and the daytime server ([section 8](#8-the-daytime-client) and [section 11](#11-the-daytime-server)) "from memory. Everything afterwards is a variation."
+The lecturer's advice: "If you take one thing from this session, make it the ability to write" the daytime client and the daytime server ([section 2.1](#21-the-daytime-client) and [section 2.4](#24-the-daytime-server)) "from memory. Everything afterwards is a variation."
 
 The word to notice is **interface**. A socket is not a protocol and not a network. It is the **boundary between your program and the operating system's networking machinery**.
 
-> **Kid example.** A socket is like the counter window at a post office. You don't go into the back room and sort mail yourself; you hand your letter through the window and pick up letters there. The window is the interface; the post office behind it is the kernel and the network.
-
----
-
-## 2. The layers below your program
+### 1.2 The layers below your program
 
 The lecture reviews a client and a server talking over Ethernet with TCP:
 
@@ -168,9 +171,7 @@ What each layer promises matters. TCP promises that bytes arrive, **in order, ev
 1. **The number of `write` calls at one end has no relation to the number of `read` calls at the other.** TCP may split your bytes over several segments or join them with bytes from a later write. This is "the single most common source of bugs in first network programs".
 2. **None of the layers in between knows about your message.** The reliability you rely on is built by the two endpoints, not by the network.
 
----
-
-## 3. Connections, socket addresses and the four-tuple
+### 1.3 Connections, socket addresses and the four-tuple
 
 The lecture names the things that identify a connection:
 
@@ -194,9 +195,7 @@ flowchart LR
 
 The four-tuple is why one server can hold thousands of connections on one port: all connections to port 80 share three of the four values and differ in the client's port (or address). Also, the same four-tuple returns in the data-centre material, where ECMP load balancing hashes exactly these values to choose a path.
 
----
-
-## 4. Clients, servers and ports
+### 1.4 Clients, servers and ports
 
 **Clients.** Examples: web browsers, ftp, telnet, ssh. How does a client find a server?
 
@@ -238,11 +237,7 @@ Clients and servers are **processes**, running on the same or on different hosts
 
 A machine that runs a server is also often called "a server". The file `/etc/services` lists the services on a Linux machine. Two lessons follow from "long-running": a server **must not leak** (memory, descriptors), and a server **cannot trust its input**, because anyone who can reach the port can connect.
 
-> **Kid example.** The IP address is the street address of an apartment building. The port is the apartment number. "Apartment 80" is where the web server lives; "apartment 25" is where the mail server lives.
-
----
-
-## 5. What a socket is
+### 1.5 What a socket is
 
 The socket interface was **created in the early 1980s** as part of the Berkeley distribution of Unix that contained an early version of the Internet protocols. It:
 
@@ -265,11 +260,7 @@ The lecture shows the same API from **Java**: a `Socket` class with input and ou
 
 Note that the word "socket" is used in **four senses**: the whole API; the descriptor your program holds; the kernel data structure behind it; and in "socket address", an address-and-port pair.
 
-> **Kid example.** The kernel is the school bus driver. Only the driver may drive the bus (the network card). You get a ticket number (the descriptor, say 4) and say "please deliver this on ticket 4". The driver does the hard work.
-
----
-
-## 6. The map of the socket calls
+### 1.6 The map of the socket calls
 
 This is "the one slide from part one worth memorising": the overview of the BSD sockets interface.
 
@@ -297,11 +288,7 @@ sequenceDiagram
 
 The asymmetry to remember: **the client makes two calls before it can talk; the server makes four**, three of which only say "I am willing to receive connections, at this address and port, with a queue this deep".
 
-> **Kid example.** A shop. `socket` = build the shop. `bind` = put the street address on the door. `listen` = open the doors. `accept` = a shop assistant walks over to the next customer while the door stays open for others. The customer's `connect` = walking in.
-
----
-
-## 7. Where sockets came from: BSD history
+### 1.7 Where sockets came from: BSD history
 
 This part is marked "extra review on your own": the history is interesting but **not examinable**.
 
@@ -314,9 +301,9 @@ This part is marked "extra review on your own": the history is interesting but *
 
 The lesson: the technical quality of the BSD stack explains why people wanted it; the **licence** explains why they could have it. Commercial Unix vendors, Microsoft and router makers took it, which is why this one API became universal. And because the API made **very few decisions for the programmer** (protocol, addressing, concurrency, buffering), it has aged well.
 
----
+## 2. A first client and server
 
-## 8. The daytime client
+### 2.1 The daytime client
 
 The **daytime** service (TCP port 13) is very simple: when you connect, the server sends the current date and time as a line of text and closes the connection. The lecture shows the client.
 
@@ -351,7 +338,7 @@ Line by line, in plain words:
 1. **Declarations.** Reserve a place for the socket descriptor (`sockfd`), a byte count (`n`), a receive buffer (`recvline`) and a **socket address structure** for the server (`servaddr`).
 2. **Argument check.** The program must be given the server's IP address when it is started; otherwise it prints how to use it and stops.
 3. **`socket(AF_INET, SOCK_STREAM, 0)`** creates a **TCP socket over IPv4**: `AF_INET` = IPv4 address family, `SOCK_STREAM` = reliable byte stream, `0` = "pick the obvious protocol", which is TCP. It returns a **small integer descriptor**. If it returns a negative number, there was an error.
-4. **`bzero`** fills the address structure with zeros (so no leftover garbage remains), then the program fills in the **family** (IPv4), the **port** 13 (converted with `htons` to network byte order, [section 19](#19-byte-ordering)) and the **IP address** (converted from text like "192.0.2.5" to binary by `inet_pton`, [section 22](#22-converting-addresses-between-text-and-binary)).
+4. **`bzero`** fills the address structure with zeros (so no leftover garbage remains), then the program fills in the **family** (IPv4), the **port** 13 (converted with `htons` to network byte order, [section 4.1](#41-byte-ordering)) and the **IP address** (converted from text like "192.0.2.5" to binary by `inet_pton`, [section 4.4](#44-converting-addresses-between-text-and-binary)).
 5. **`connect`** starts the TCP three-way handshake with the server. When it returns successfully, the connection is established.
 6. **The read loop.** Call `read` again and again while it returns a positive number of bytes. Each time, add a zero byte at the end (C's way of marking the end of text) and print the text. When `read` returns **0**, the server has closed the connection, and the loop ends. A negative value means an error.
 
@@ -362,11 +349,7 @@ The lecture adds:
 
 At the moment `socket` returns, the socket exists but is **connected to nothing**: no address, no peer. Everything useful happens in the calls after it.
 
-> **Kid example.** `socket` is buying a phone. Filling in `servaddr` is writing the friend's number on a note. `connect` is dialling. The read loop is listening until the friend hangs up.
-
----
-
-## 9. TCP is a byte stream
+### 2.2 TCP is a byte stream
 
 The lecture explains why the client reads **in a loop**.
 
@@ -397,11 +380,7 @@ flowchart LR
 | A **length prefix** before each record | **Sun RPC** and **DNS** put a binary counter with the record length in front of each record | you must know the length before you start sending |
 | **Closing the connection** | the daytime server, HTTP 1.0 | only one message per connection |
 
-> **Kid example.** Pouring a litre of juice into a pipe. At the other end you fill cups. You may fill three small cups or one big one. The pipe doesn't know that your juice was "one bottle". If the other person needs to know where one bottle ends, you must tell them, for example by saying the size first.
-
----
-
-## 10. Error handling with wrapper functions
+### 2.3 Error handling with wrapper functions
 
 **It is essential to check every function call for an error return.** To keep the code readable, Stevens uses **wrapper functions**: the same name with a **capital letter**, which calls the real function, checks the result, and stops the program with a message if there was an error.
 
@@ -416,11 +395,9 @@ int Socket(int family, int type, int protocol) {
 
 In words: call the real `socket`; if the result is negative, print "socket error" and stop; otherwise hand back the descriptor. You will see `Socket`, `Bind`, `Listen`, `Accept`, `Write`, `Close` … throughout the lecture.
 
-A caution: "check and abort" is right for teaching code and small tools, but **wrong for a server**, which must **not stop just because one client did something strange** ([section 37](#37-denial-of-service-and-robust-servers)).
+A caution: "check and abort" is right for teaching code and small tools, but **wrong for a server**, which must **not stop just because one client did something strange** ([section 7.1](#71-denial-of-service-and-robust-servers)).
 
----
-
-## 11. The daytime server
+### 2.4 The daytime server
 
 The lecture shows the server.
 
@@ -466,11 +443,9 @@ In plain words:
 
 **What `accept` really does.** The server process is **put to sleep** in `accept`, waiting for connections. TCP sets up connections with the **three-way handshake**; when the handshake completes, `accept` **returns**, and its return value is a new descriptor, the **connected descriptor**, used to talk to the new client. The order matters: **the kernel completes the handshake first**, even while the program is busy elsewhere; `accept` just **hands over** a connection that the kernel has already established.
 
-> **Note on the source.** The lecture's server code writes `bzeros(&servaddr, …)`. The real function is called **`bzero`** (or the standard `memset(&servaddr, 0, sizeof(servaddr))`); `bzeros` does not exist and would not compile.
+**Technical clarification.** The lecture's server code writes `bzeros(&servaddr, …)`. The real function is called **`bzero`** (or the standard `memset(&servaddr, 0, sizeof(servaddr))`); `bzeros` does not exist and would not compile.
 
----
-
-## 12. Iterative servers
+### 2.5 Iterative servers
 
 **The daytime server handles only one client at a time.** If several connections arrive at about the same time, the **kernel queues them**, up to some limit, and `accept` returns them **one at a time**. The daytime server is fast, so nobody notices. But if serving each client took longer, we would need to **overlap** the service of one client with another. A server that serves one client after another is called an **iterative server**.
 
@@ -494,11 +469,9 @@ sequenceDiagram
 
 Client 2's connection may already be established by the kernel, but no data flows until the server comes back to `accept`. That waiting gap grows with the time each client takes and with the number of clients waiting. **Every concurrency technique later in the block is an attempt to remove this gap.**
 
-> **Kid example.** A shop with one cashier who serves each customer from "hello" to "goodbye" before even looking at the queue. Fine if everyone buys one sweet; terrible if someone wants to chat.
+## 3. TCP connection establishment, termination and ports
 
----
-
-## 13. The three-way handshake
+### 3.1 The three-way handshake
 
 To understand `connect`, `accept` and `close`, you must understand how TCP connections are **established and terminated**, and TCP's **state transition diagram**.
 - The **server** prepares to accept a connection by calling `socket`, `bind` and `listen`. This is a **passive open**.
@@ -526,11 +499,7 @@ Here J and K are the two initial sequence numbers. Why **three** segments?
 
 The cost (notes): **no data can flow until one round-trip time has passed**. On a path with a 100 ms round trip, that is a tenth of a second spent only on agreeing. This is why HTTP keeps connections open (keep-alive) and why QUIC combines its handshake with encryption set-up.
 
-> **Kid example.** Phoning a friend. You: "Hello, can you hear me?" (SYN). Friend: "Yes, I hear you. Can you hear me?" (SYN + ACK). You: "Yes!" (ACK). Now you can talk.
-
----
-
-## 14. Closing a connection and the half-close
+### 3.2 Closing a connection and the half-close
 
 The lecture shows that closing takes **four segments**:
 
@@ -553,15 +522,11 @@ sequenceDiagram
   C->>S: ACK N+1
 ```
 
-**Half-close.** Between steps 2 and 3, data **can still flow** from the passive-closing end to the active-closing end. A TCP connection is really **two independent byte streams**, one per direction, and each can end without the other. This is a real feature: a client can say "I have finished sending my request, now send me the answer". The `shutdown` call does exactly this ([section 35](#35-the-batch-mode-bug-and-shutdown)).
+**Half-close.** Between steps 2 and 3, data **can still flow** from the passive-closing end to the active-closing end. A TCP connection is really **two independent byte streams**, one per direction, and each can end without the other. This is a real feature: a client can say "I have finished sending my request, now send me the answer". The `shutdown` call does exactly this ([section 6.6](#66-the-batch-mode-bug-and-shutdown)).
 
 So **a `read` that returns 0 is not an error and not an empty message.** It means "the peer has finished sending".
 
-> **Kid example.** Ending a phone call politely. You: "I have nothing more to say." Friend: "OK." (Your friend can still tell you one more thing.) Friend: "Bye then." You: "OK, bye."
-
----
-
-## 15. The TCP state transition diagram
+### 3.3 The TCP state transition diagram
 
 A TCP connection is always in one **state**. The API calls either **drive** a state change or **report** one:
 
@@ -594,13 +559,11 @@ stateDiagram-v2
 
 The left path (FIN_WAIT_1, FIN_WAIT_2, TIME_WAIT) is the **active closer**; the right path (CLOSE_WAIT, LAST_ACK) is the **passive closer**. Note that the difference matters: **the end that closes first must sit in TIME_WAIT afterwards**. Which end that is depends on your application protocol. A web server that closes after each response is the active closer on every connection, which historically caused scaling problems.
 
-> **Beyond the slides.** The full diagram on the original slide (Stevens, figure 2.4) also has a direct arrow FIN_WAIT_1 → TIME_WAIT when a FIN and the ACK of our FIN arrive together, and the timeout paths back to CLOSED. The drawing above keeps the main arrows.
+**Additional context.** The full diagram on the original slide (Stevens, figure 2.4) also has a direct arrow FIN_WAIT_1 → TIME_WAIT when a FIN and the ACK of our FIN arrive together, and the timeout paths back to CLOSED. The drawing above keeps the main arrows.
 
 **Watching the packets.** **`netstat`** displays network connections, routing tables and interface statistics. "Try it!" While your client and server talk you will see `ESTABLISHED`; afterwards `TIME_WAIT`; on the server's waiting socket `LISTEN`. On Linux, **`ss`** is the modern replacement.
 
----
-
-## 16. TIME_WAIT
+### 3.4 TIME_WAIT
 - The end that does the **active close** goes through the **TIME_WAIT** state.
 - It stays there for **2 × MSL** (twice the maximum segment lifetime).
 - **MSL** is the longest time any IP datagram can live in the network. It is **bounded** because every datagram carries an **8-bit hop limit** (TTL), so it cannot circulate forever.
@@ -633,13 +596,9 @@ sequenceDiagram
 
 † The **design consequences**. TIME_WAIT is a **resource**: each connection in it holds a kernel table entry and reserves a four-tuple for about a minute on the machine that closed first. A busy server closing many short connections can hold tens of thousands of them. This shaped protocols (**HTTP keep-alive**, **connection pooling**, **persistent connections**) and the socket API: the option **`SO_REUSEADDR`** lets a server bind a port that still has connections in TIME_WAIT (you will need it in the labs, otherwise a restarted server fails with "address already in use"). The general lesson: a mechanism designed for correctness when connections were few and long can become a bottleneck when usage changes.
 
-> **Kid example.** After saying "bye" on a walkie-talkie, you keep it switched on for one more minute. If your friend didn't hear your last "OK", they will say "bye?" again, and you can answer. And any old echo of your conversation has died out before someone else uses the same channel.
+**Technical clarification.** The lecture says the TIME_WAIT material is "hidden in the current deck". In fact only the parts marked † above are hidden; the rest of this section is visible.
 
-> **Note on the source.** The lecture says the TIME_WAIT material is "hidden in the current deck". In fact only the parts marked † above are hidden; the rest of this section is visible.
-
----
-
-## 17. Port number ranges and ephemeral ports
+### 3.5 Port number ranges and ephemeral ports
 
 The lecture divides the 16-bit port numbers (0 to 65535) into three ranges. The figure in the lecture (from Stevens) gives the numbers:
 
@@ -653,11 +612,9 @@ The figure also shows older conventions: BSD **reserved** ports 1–1023 (only p
 
 **Ephemeral ports.** Ephemeral means **short-lived**. They are used for the **client end** of a client-server connection to a well-known port on a server. They may also be used to free up a server's well-known listening port by moving the service connection elsewhere. The allocation is **temporary**, valid only for the session; afterwards the port can be reused. The client does not choose its port: it calls `connect` without `bind`, and the kernel picks an unused one. Also, there are about **16 000** ports in the usual range, so one client machine cannot hold more than about that many connections **to the same server address and port**, because each four-tuple must be unique.
 
-> **Note on the source.** The lecture's figure starts the well-known range at 1; officially it is **0 to 1023**.
+**Technical clarification.** The lecture's figure starts the well-known range at 1; officially it is **0 to 1023**.
 
----
-
-## 18. Many connections on one port
+### 3.6 Many connections on one port
 
 The lecture shows how a **concurrent server** can serve many clients on **one** port. The server host is **multihomed**: it has two IP addresses, `12.106.32.254` and `192.168.42.1`. It does a passive open on the well-known port **21** (FTP).
 
@@ -684,11 +641,9 @@ flowchart LR
 
 **The rule to remember:** TCP **cannot demultiplex** incoming segments by looking only at the destination port. It must look at **all four values of the socket pair** to decide which endpoint gets an arriving segment. A segment matches the **most specific** socket that fits, so an established connection always wins over the wildcard listener. (UDP, by contrast, delivers by destination port alone, because a UDP socket has no peer.)
 
-> **Kid example.** One school phone number (port 21) with many lines. The receptionist (listening socket) answers every new call and passes it to a free teacher (child). The phone system tells the calls apart by who is calling from which phone, not by the school number, which is the same for all.
+## 4. Byte order, addresses and address structures
 
----
-
-## 19. Byte ordering
+### 4.1 Byte ordering
 
 This part is marked "review on your own".
 
@@ -724,13 +679,9 @@ A `union` lets the same two bytes of memory be read either as one number (`s`) o
 | `ntohs()` | network to host, short | port numbers, after receiving |
 | `ntohl()` | network to host, long | IPv4 addresses, after receiving |
 
-On a big-endian machine these functions do nothing, which is exactly why forgetting them is dangerous: the program works on one kind of machine and silently gives wrong numbers on another. You will also see many "structure casts" in socket code ([section 21](#21-socket-address-structures)).
+On a big-endian machine these functions do nothing, which is exactly why forgetting them is dangerous: the program works on one kind of machine and silently gives wrong numbers on another. You will also see many "structure casts" in socket code ([section 4.3](#43-socket-address-structures)).
 
-> **Kid example.** Writing a date. Sweden writes "2026-10-20" (big part first); the US writes "10/20/2026". If two people don't agree on the order, the same digits mean a different day. `htons` means "rewrite the date in the agreed order before sending".
-
----
-
-## 20. IP addresses and names
+### 4.2 IP addresses and names
 
 **The programmer's view** has three mappings:
 
@@ -756,9 +707,7 @@ IP addresses are **always stored in memory in network byte order**. The same is 
 - **`getnameinfo()`** does the reverse direction (address to name).
 - **Legacy:** `gethostbyname()`, `gethostbyaddr()` and `struct hostent` are **IPv4-only and not thread-safe**. You will meet them in older code and in the labs.
 
----
-
-## 21. Socket address structures
+### 4.3 Socket address structures
 
 **Two structures.** The functions `connect`, `bind` and `accept` take a pointer to a **generic** socket address. Programs fill in an **Internet-specific** one and **cast** (re-label) its pointer to the generic type.
 
@@ -807,9 +756,7 @@ flowchart LR
   F -->|"kernel reads the<br/>family field first"| K[knows it is IPv4]
 ```
 
----
-
-## 22. Converting addresses between text and binary
+### 4.4 Converting addresses between text and binary
 
 Humans write addresses as text (`"192.168.1.5"` or `"2001:db8::1"`); socket address structures store them as **binary numbers in network byte order**.
 
@@ -856,9 +803,9 @@ printf("server connected to %s (%s)\n", hp->h_name, haddrp);
 
 In words: do a **reverse DNS lookup** of the client's address (`Gethostbyaddr`), turn the address into text (`inet_ntoa`), and print both. Two cautions: reverse lookups are **slow** (a network round trip per connection), and the name is **not trustworthy** for authentication, because the owner of an address block controls its reverse names. This code uses the legacy calls; `getnameinfo` is the modern one.
 
----
+## 5. Robust I/O and the elementary socket calls
 
-## 23. Short reads and writes: readn, writen and readline
+### 5.1 Short reads and writes: readn, writen and readline
 
 **How TCP sockets differ from normal file I/O.** It is **not an error** for `read` or `write` on a socket to transfer **fewer bytes than requested**, because buffer limits in the kernel may be reached. You simply call `read` or `write` again. With `read` this can always happen on a stream socket; with `write` it is normally seen only on non-blocking sockets. Still, the examples always call **`writen`** instead of `write`, in case the implementation returns a short count.
 
@@ -921,11 +868,7 @@ In words: `my_read` hands out **one byte at a time**, but it only calls the real
 
 **Summary.** TCP sockets give a **byte stream**: there are **no record markers**, and a `read` can return **less than asked for, which is not an error**. `readn`, `writen` and `readline` help with this. However, **network programs should be written to act on buffers rather than lines**.
 
-> **Kid example.** Waiting for a 10-piece puzzle that arrives in envelopes. You don't start the puzzle when the first envelope comes; you keep opening envelopes (`readn`) until you have all 10 pieces, or until the post office says "that's all" (EOF).
-
----
-
-## 24. The socket function
+### 5.2 The socket function
 
 The lecture revisits each elementary call, now with its state change. The lecture points back to the state diagram.
 
@@ -951,9 +894,7 @@ It creates **no connection, reserves no port and contacts nothing**; it only all
 
 **State.** **CLOSED** is the state a socket starts in when `socket` creates it. From there, `connect` leads towards SYN_SENT (a client), while `bind` + `listen` lead to LISTEN (a server).
 
----
-
-## 25. The connect function
+### 5.3 The connect function
 
 **`connect`** is how a TCP **client** establishes a connection with its server:
 
@@ -988,13 +929,9 @@ flowchart LR
   B -->|"no answer for 75 s: timeout"| D
 ```
 
-> **Note on the source.** The lecture once writes "STABLISHED"; it means **ESTABLISHED**.
+**Technical clarification.** The lecture once writes "STABLISHED"; it means **ESTABLISHED**.
 
-> **Kid example.** Ringing a doorbell. Nobody comes after three rings and a long wait: timeout. Someone shouts "nobody by that name lives here!": refused. A neighbour says "that road is closed": unreachable, but you keep trying a bit in case it reopens.
-
----
-
-## 26. The bind function
+### 5.4 The bind function
 
 **`bind`** assigns a **local protocol address** to a socket: a 32-bit IPv4 or 128-bit IPv6 address together with a 16-bit TCP or UDP port.
 
@@ -1028,9 +965,7 @@ With port 0, the kernel picks an ephemeral port **when `bind` is called**. With 
 - `sockfd` is not a valid descriptor;
 - the socket is **already bound**.
 
----
-
-## 27. The listen function and its two queues
+### 5.5 The listen function and its two queues
 
 **`listen`** is called **only by a TCP server**:
 
@@ -1082,11 +1017,9 @@ void Listen(int fd, int backlog) {
 
 In words: if an **environment variable** called `LISTENQ` is set (a setting you can give from the shell), use its value as the backlog; then call `listen` and stop on error. So the backlog can be tuned **without recompiling**. Errors of `listen`: another socket is already listening on the same port; `sockfd` is not a valid socket; the socket type does not support `listen`.
 
-> **Beyond the slides.** The two queues are what a **SYN flood** attacks: an attacker sends many SYNs from fake addresses and never completes the handshake, so the incomplete queue fills up and real clients are turned away. **SYN cookies** are the standard defence (see the TCP guide, 13-TCP.md).
+**Additional context.** The two queues are what a **SYN flood** attacks: an attacker sends many SYNs from fake addresses and never completes the handshake, so the incomplete queue fills up and real clients are turned away. **SYN cookies** are the standard defence (see the TCP guide, 13-TCP.md).
 
----
-
-## 28. The accept function
+### 5.6 The accept function
 
 **`accept`** returns the **next completed connection** from the **front of the completed connection queue**. If that queue is empty, the process is **put to sleep** (by default).
 
@@ -1140,11 +1073,7 @@ sequenceDiagram
 
 **Errors:** the descriptor is invalid; **the connection has been aborted** (a client completed the handshake and then reset the connection before `accept`; the right reaction is to ignore it and call `accept` again); the socket is not listening or `addrlen` is invalid; the **per-process** or **system** limit on open descriptors is reached; the socket is not of type `SOCK_STREAM`; not enough free memory (often the **socket buffer limits**, not the system memory); a protocol error; **firewall rules forbid the connection**.
 
-> **Kid example.** A hotel receptionist (listening descriptor) stands at the front desk all day. For each guest, the receptionist hands over a room key (connected descriptor). The guest uses the room, not the front desk. When the guest leaves, the key is returned, but the front desk stays open.
-
----
-
-## 29. The close function
+### 5.7 The close function
 
 **`close`** closes a socket and terminates the TCP connection:
 
@@ -1157,11 +1086,11 @@ int close(int sockfd);
 - TCP will **try to send any data already queued** to the other end, and **after that** the normal termination sequence (FIN, ACK, …) takes place.
 - The **`SO_LINGER`** socket option can change this default behaviour.
 
-Also: because `close` returns **at once**, a successful `close` tells you **nothing about whether your data arrived**. If you need certainty, the application must send its own acknowledgement. And `close` ends **both** directions; `shutdown` can end just one ([section 35](#35-the-batch-mode-bug-and-shutdown)).
+Also: because `close` returns **at once**, a successful `close` tells you **nothing about whether your data arrived**. If you need certainty, the application must send its own acknowledgement. And `close` ends **both** directions; `shutdown` can end just one ([section 6.6](#66-the-batch-mode-bug-and-shutdown)).
 
----
+## 6. The echo service, I/O models and select
 
-## 30. The echo client and server
+### 6.1 The echo client and server
 
 The lecture builds a richer pair: the **echo** server sends back whatever the client sends; the client reads lines from the keyboard.
 
@@ -1242,11 +1171,7 @@ sequenceDiagram
   Note over C: only now discovers the server is gone
 ```
 
-> **Kid example.** You are waiting by the front door for a parcel and can't hear the phone ringing in the kitchen. You need a way to wait for "whichever happens first".
-
----
-
-## 31. I/O models
+### 6.2 I/O models
 
 **I/O multiplexing.** We need a way for the process to **tell the kernel** that it wants to be **notified when one or more I/O conditions are ready**: input is ready to be read, or a descriptor can take more output. This is **I/O multiplexing**, provided by **`select`**. Instead of choosing one descriptor and blocking on it, the program gives the kernel a **set** and blocks on the set.
 
@@ -1281,17 +1206,13 @@ A read has **two waiting phases**: (1) **waiting for data** to arrive, and (2) *
 | Non-blocking | "check, check, check …" (each call returns at once) | blocked in `read` |
 | I/O multiplexing | blocked in `select`, until "ready" | blocked in `read` |
 
-"First phase handled differently, second phase handled the same (blocked in the call to `recvfrom`)." Also, only **asynchronous I/O** (not taught here) avoids blocking in both phases; this is the model of Linux's io_uring ([section 40](#40-c10k-and-c10m)).
+"First phase handled differently, second phase handled the same (blocked in the call to `recvfrom`)." Also, only **asynchronous I/O** (not taught here) avoids blocking in both phases; this is the model of Linux's io_uring ([section 7.4](#74-c10k-and-c10m)).
 
 Multiplexing costs **two system calls** (select, then read) where blocking needs one, so it is worse for a single descriptor. It pays off as soon as there are **several** descriptors to watch with one thread.
 
-> **Note on the source.** The lecture's explanation describes "all five models side by side", but the figure in the lecture shows only **three** columns (blocking, non-blocking, I/O multiplexing). The full figure in Stevens (figure 6.6) has all five.
+**Technical clarification.** The lecture's explanation describes "all five models side by side", but the figure in the lecture shows only **three** columns (blocking, non-blocking, I/O multiplexing). The full figure in Stevens (figure 6.6) has all five.
 
-> **Kid example.** A teacher with 30 students. Blocking: stand next to one student until they answer. Non-blocking: keep running from desk to desk asking "done yet?". Multiplexing (`select`): say "raise your hand when ready", sit down, and help whoever raises a hand.
-
----
-
-## 32. The select function
+### 6.3 The select function
 
 **`select`:**
 
@@ -1366,11 +1287,9 @@ flowchart LR
 
 "Ready" means **the next call will not block**, not that it will succeed. A socket whose peer has closed is **readable** (and `read` returns 0); a listening socket is **readable** when `accept` has a connection to hand over.
 
-> **Note on the source.** The first bullet of the `select` overview, "TCP client establishes a connection with its server", is copied from the `connect` material by mistake; it has nothing to do with `select`.
+**Technical clarification.** The first bullet of the `select` overview, "TCP client establishes a connection with its server", is copied from the `connect` material by mistake; it has nothing to do with `select`.
 
----
-
-## 33. The echo client with select
+### 6.4 The echo client with select
 
 **What makes the socket readable:**
 
@@ -1418,9 +1337,7 @@ flowchart TB
   W --> SEL
 ```
 
----
-
-## 34. Batch input: stop-and-wait is slow
+### 6.5 Batch input: stop-and-wait is slow
 
 The original client works in **stop-and-wait** mode: it sends one line and **waits for the reply** before sending the next. Each line takes **one RTT** (round-trip time) plus the server's processing time (about 0 for an echo server). That is fine for a human typing, but how long does it take to echo a whole file?
 
@@ -1461,11 +1378,7 @@ sequenceDiagram
   S->>C: echo 4
 ```
 
-> **Kid example.** Carrying 2 000 buckets of water from a well, but you must walk all the way back before filling the next one. A long, wide road doesn't help; only a shorter road would. Batch mode is a chain of people passing buckets: many buckets are on the road at once.
-
----
-
-## 35. The batch-mode bug and shutdown
+### 6.6 The batch-mode bug and shutdown
 
 **The bug.** We can run the client in **batch mode** by redirecting input and output (for example `echoclient host < file1 > file2`). For an echo protocol, the output file should be **identical** to the input file. But **the output file is always smaller**!
 
@@ -1480,7 +1393,7 @@ sequenceDiagram
   S--xC: echoes of 7, 8, 9 still on the way, lost
 ```
 
-**The solution:** send a **FIN** to the server, saying "we have finished sending data", but **leave the socket open for reading**. This is TCP's **half-close** ([section 14](#14-closing-a-connection-and-the-half-close)).
+**The solution:** send a **FIN** to the server, saying "we have finished sending data", but **leave the socket open for reading**. This is TCP's **half-close** ([section 3.2](#32-closing-a-connection-and-the-half-close)).
 
 **`shutdown` vs `close`:**
 
@@ -1549,11 +1462,9 @@ sequenceDiagram
 
 **Summary.** The default is **blocking I/O**, also the most used. The most used function for I/O multiplexing is **`select`**: we tell it which descriptors interest us (reading, writing, exceptions), the maximum time to wait, and the maximum descriptor number plus one. Running the echo client in batch mode with `select` showed that even when the user's input has ended, **data can still be in the pipe** to or from the server; handling this needs **`shutdown`** and TCP's **half-close**. "The **dangers of mixing stdio buffering** (as well as our own readline buffering) **with `select`**" led to versions of the echo client and server that **operate on buffers instead of lines**.
 
-> **Beyond the slides.** Why is mixing stdio with `select` dangerous? `fgets` may read **several lines at once** from the kernel into stdio's own hidden buffer and give you only the first. `select` only looks at the **kernel's** descriptor, which is now empty, so it does not report the lines still waiting inside stdio, and they may be ignored until more input arrives. That is why the final version uses `Read` on `fileno(fp)` directly.
+**Additional context.** Why is mixing stdio with `select` dangerous? `fgets` may read **several lines at once** from the kernel into stdio's own hidden buffer and give you only the first. `select` only looks at the **kernel's** descriptor, which is now empty, so it does not report the lines still waiting inside stdio, and they may be ignored until more input arrives. That is why the final version uses `Read` on `fileno(fp)` directly.
 
----
-
-## 36. An echo server built on select
+### 6.7 An echo server built on select
 
 The lecture builds a server that serves **many clients with one process and no `fork`**.
 
@@ -1635,13 +1546,11 @@ In plain words:
 4. If the **listening socket** is ready: `accept` the new client, put its descriptor in the first free place of `client[]` (stop with "too many clients" if there is none), add it to `allset`, and update `maxfd` and `maxi`. If that was the only ready descriptor, go back to `select`.
 5. Then look through `client[]`. For each client whose descriptor is ready: `read`. If it returns **0**, the client has closed: **close** it, remove it from `allset`, and mark the slot free. Otherwise **echo** the bytes back with `Writen`. Stop early once all `nready` ready descriptors have been handled.
 
-Three things to notice. The program handles "too many clients" by **dying**, which is fine for teaching but not for a real server (it should refuse the one client). `maxfd` is **never lowered** when the highest descriptor closes, so the kernel keeps scanning more than needed. And three **linear scans** happen per event (the kernel over the descriptors, the program over `client[]`, and over the set), harmless at 10 clients but a problem at 10 000 ([section 40](#40-c10k-and-c10m)).
+Three things to notice. The program handles "too many clients" by **dying**, which is fine for teaching but not for a real server (it should refuse the one client). `maxfd` is **never lowered** when the highest descriptor closes, so the kernel keeps scanning more than needed. And three **linear scans** happen per event (the kernel over the descriptors, the program over `client[]`, and over the set), harmless at 10 clients but a problem at 10 000 ([section 7.4](#74-c10k-and-c10m)).
 
-> **Kid example.** One waiter for many tables. The waiter keeps a list of occupied tables (`allset`). Each round, the waiter looks at which tables have a hand up (`select`), takes new guests to a free table (accept), brings food to tables that asked (echo), and clears tables whose guests have left (close).
+## 7. Robust and scalable servers
 
----
-
-## 37. Denial of service and robust servers
+### 7.1 Denial of service and robust servers
 
 **The one-byte attack.** What happens if a **malicious client connects, sends one byte (not a newline), and goes to sleep**? The server calls `read` (inside a read-a-line function), gets the single byte, and then **blocks in the next `read`**, waiting for the rest of the line from this client. The server is now **blocked by this one client** and serves **nobody else**, neither new connections nor existing clients' data, until the malicious client sends a newline or terminates.
 
@@ -1699,11 +1608,7 @@ stateDiagram-v2
   Partial --> [*]: client closes or times out
 ```
 
-> **Kid example.** A teacher listening to many children. If one child says "I want to tell you something…" and then goes quiet, a bad teacher stands waiting forever. A good teacher writes down what the child said so far in that child's notebook, helps others, and comes back when the child speaks again.
-
----
-
-## 38. Debugging and testing tools
+### 7.2 Debugging and testing tools
 
 **Debugging advice.** Tools make programming simpler: **GDB** helps with debugging; **DDD** is a graphical version of GDB. And:
 
@@ -1727,13 +1632,11 @@ Also: also compile with **`-Wall`** (all warnings); and when a socket call fails
 
 **Testing servers with telnet.** `telnet <host> <portnumber>` opens a connection to a server on that host and port, and lets you type to it. It is invaluable for testing servers that send **ASCII text**: the echo server, web servers, mail servers. It separates "is my server wrong?" from "is my client wrong?". Also, **`nc` (netcat)** does the same job on systems without telnet, and that neither works for binary or encrypted protocols (use `openssl s_client` for TLS).
 
----
-
-## 39. Kinds of servers
+### 7.3 Kinds of servers
 
 The lecture compares server designs.
 
-**Iterative servers** process **one request at a time** (the timeline of [section 12](#12-iterative-servers)).
+**Iterative servers** process **one request at a time** (the timeline of [section 2.5](#25-iterative-servers)).
 
 **Their flaw.** Client 1 connects and the server blocks waiting for its data. The **user of client 1 goes out to lunch**, so client 1 blocks waiting for the user to type. **Client 2 blocks** waiting to complete its connection request **"until after lunch!"**. **Solution: concurrent servers**, which use **multiple concurrent flows** to serve multiple clients at the same time.
 
@@ -1760,11 +1663,7 @@ The lecture compares server designs.
 
 The lecture adds: modern equivalents are **epoll (Linux)** and **kqueue (BSD)**; "select does not scale. See C10K."
 
-> **Kid example.** A restaurant can hire one waiter per table (processes or threads: simple but costly), or have one very organised waiter who keeps a list and serves whoever raises a hand (event-based: cheap but the waiter must never stand frozen at one table).
-
----
-
-## 40. C10K and C10M
+### 7.4 C10K and C10M
 
 **C10K: why `select` ran out.** In **1999, Dan Kegel** asked: can **one server hold ten thousand concurrent connections**?
 
@@ -1796,11 +1695,9 @@ flowchart LR
   C --> D["DPDK, user-space TCP<br/>C10M: bypass the kernel<br/>costs a polling core"]
 ```
 
-> **Note on the source.** The lecture says "The SDN lecture taught them [XDP and eBPF] from the switch side". The SDN lecture in this course does not mention XDP or eBPF (see 14-SDN.md); treat that sentence as a leftover from another version of the course.
+**Technical clarification.** The lecture says "The SDN lecture taught them [XDP and eBPF] from the switch side". The SDN lecture in this course does not mention XDP or eBPF (see 14-SDN.md); treat that sentence as a leftover from another version of the course.
 
----
-
-## 41. Above the socket: messaging libraries
+### 7.5 Above the socket: messaging libraries
 
 **Message-oriented middleware.** "We spent nine slides on `readn`, `writen` and `readline`, because TCP is a byte stream." **ZeroMQ** delivers **whole messages, atomically**: the **framing problem disappears**.
 
@@ -1820,9 +1717,9 @@ flowchart LR
 
 "Each hides connection visibility, backpressure and failure modes. **Know what you traded.**"
 
----
+## 8. Summary and review
 
-## 42. Summary
+### 8.1 Summary
 
 **Concepts:**
 
@@ -1863,11 +1760,9 @@ flowchart LR
 
 **Best practices:** always **loop on `read`**; use **robust I/O wrappers**; **check return codes** consistently; **prefer multiplexing**; configure socket options carefully; **respect TIME_WAIT**; **convert byte order**; **free resources promptly**; **prefer epoll or kqueue over `select`**; **resolve with `getaddrinfo()` and store in `sockaddr_storage`** (protocol-independent by default).
 
-> **Note on the source.** Two summary lines are imprecise. (1) The summary says TIME_WAIT "prevents reuse of **ports**". More exactly, it prevents reuse of the same **four-tuple** (both addresses and both ports), as [section 16](#16-time_wait) explains; a server can still accept new connections on the same port during TIME_WAIT. (2) The summary lists "MSL" next to socket options such as `SO_LINGER`. MSL is **not** a per-socket option a program can configure; it is a fixed value inside the TCP implementation (Linux, for example, uses a fixed 60-second TIME_WAIT).
+**Technical clarification.** Two summary lines are imprecise. (1) The summary says TIME_WAIT "prevents reuse of **ports**". More exactly, it prevents reuse of the same **four-tuple** (both addresses and both ports), as [section 3.4](#34-time_wait) explains; a server can still accept new connections on the same port during TIME_WAIT. (2) The summary lists "MSL" next to socket options such as `SO_LINGER`. MSL is **not** a per-socket option a program can configure; it is a fixed value inside the TCP implementation (Linux, for example, uses a fixed 60-second TIME_WAIT).
 
----
-
-## 43. Self-assessment checklists †
+### 8.2 Self-assessment checklists †
 
 The three hidden self-assessment slides list what you should be able to do without looking.
 
@@ -1894,29 +1789,25 @@ The three hidden self-assessment slides list what you should be able to do witho
 - say why **"readable" can mean end-of-file**, and what happens if you don't check;
 - explain the **batch-mode bug** and why **`shutdown`** fixes it.
 
----
+### 8.3 Old exam questions on sockets
 
-## 44. Old exam questions on sockets
-
-> **Beyond the slides.** These come from the course's old exams. Where no official answer exists, the answer is built from the lectures.
+**Additional context.** These come from the course's old exams. Where no official answer exists, the answer is built from the lectures.
 
 **October 2021, 1.m (true or false):** "Using the socket API (`socket`, `bind`, `listen`, `accept`, `connect`, `select`, `close`, `shutdown`) it is possible to implement a **lock** (mutex)." Official answer: **True**. For example, only one socket at a time can **`bind`** a given local address and port: a process "takes the lock" by binding an agreed port; others get "address in use" and retry; **`close`** releases it. (Another way: a lock server that accepts one client at a time.)
 
 **October 2021, 1.n (true or false):** "Using the socket API it is possible to implement a **timer**." Official answer: **True**. `select` has a **timeout**: called with no descriptors (or none that become ready) and a timeout of, say, 10.2 seconds, it returns after that time.
 
-**2012–2015, "find the bug in a `select` server"** (several exams). A server calls `select`; if the listening socket is ready it calls `accept` and then immediately `recv` to read a 1-byte client ID. **The flaw:** `select` only said that a **new connection** can be accepted, not that the new client has **sent anything**. The new socket is blocking, so **`recv` blocks**; a slow or malicious client that sends nothing **freezes the whole server** (the one-byte attack of [section 37](#37-denial-of-service-and-robust-servers)). **Fix:** add the new socket to the read set and read the ID only when `select` reports it readable. A variant loops `recv` until a 24-byte message is complete: `select` only promised *some* data, so the loop blocks and starves other sockets. **Fix:** a per-socket buffer, and go back to `select`.
+**2012–2015, "find the bug in a `select` server"** (several exams). A server calls `select`; if the listening socket is ready it calls `accept` and then immediately `recv` to read a 1-byte client ID. **The flaw:** `select` only said that a **new connection** can be accepted, not that the new client has **sent anything**. The new socket is blocking, so **`recv` blocks**; a slow or malicious client that sends nothing **freezes the whole server** (the one-byte attack of [section 7.1](#71-denial-of-service-and-robust-servers)). **Fix:** add the new socket to the read set and read the ID only when `select` reports it readable. A variant loops `recv` until a 24-byte message is complete: `select` only promised *some* data, so the loop blocks and starves other sockets. **Fix:** a per-socket buffer, and go back to `select`.
 
 **2013-10 / 2014-08, Q9a and Q9b.** "Someone suggests shortening TIME_WAIT. What could happen?" Both jobs of TIME_WAIT are put at risk: a **lost final ACK** could no longer be repeated (the peer gets an RST and an error), and **old duplicate segments** could be accepted by a **new incarnation** with the same four-tuple. "How many simultaneous connections are possible, and on what does it depend?" A connection is identified by the **four-tuple**, so many can exist at once; in practice the limit is the **16-bit port space** (for one client towards one server address and port) and the operating system's **resources** (descriptors, memory).
 
 **January 2025, question 2a (3 points):** build and maintain a **complete overlay** (every node in a known set S connected to every other) in a **self-stabilizing** way, using a listening descriptor, connection descriptors, I/O multiplexing, `select`, `connect` and `accept`. The model answer: each node has one **listening** socket and a table `conn[j]` of connection descriptors. To avoid duplicates, the **smaller ID calls `connect`**, the larger ID calls **`accept`**. A **do-forever loop around `select` with a timeout** (never a NULL timeout, or repairs could stop) watches all descriptors; each round it closes `conn[j]` if `read` returned 0 or an error, or if nothing was heard for T seconds; it **re-`connect`s** every empty slot; it accepts new connections only from valid, smaller IDs; and it sends **heartbeats**. Any corrupted entry is either a dead descriptor (closed within T) or a wrong one (closed at once), and every missing connection is rebuilt in the next round: **convergence**; once all pairs are connected and heartbeats flow, nothing changes: **closure**. Traps: a blocking `read` or `connect` on one peer, both sides calling `connect`, and forgetting that TCP is a byte stream (messages need framing).
 
-**2012-10 Q3:** the client/server call diagram of [section 6](#6-the-map-of-the-socket-calls), with boxes to fill in (server: socket, bind, listen, accept; client: socket, connect; then read/write; close; `read` returns 0; back to accept), and the three exchanges: **three-way handshake**, **data**, **connection termination**.
+**2012-10 Q3:** the client/server call diagram of [section 1.6](#16-the-map-of-the-socket-calls), with boxes to fill in (server: socket, bind, listen, accept; client: socket, connect; then read/write; close; `read` returns 0; back to accept), and the three exchanges: **three-way handshake**, **data**, **connection termination**.
 
----
+### 8.4 Related quiz topics not in the lectures
 
-## 45. Related quiz topics not in the lectures
-
-> **Beyond the slides.** The course's Socket API quiz (80 questions, based on Stevens' book) asks about several things the lecture only mentions or skips. Short explanations:
+**Additional context.** The course's Socket API quiz (80 questions, based on Stevens' book) asks about several things the lecture only mentions or skips. Short explanations:
 
 **Why the socket layer is in the kernel.** Only the kernel may touch the network card. If the socket API lived entirely in user programs, every program would need **privileged access to device drivers**.
 
@@ -1964,4 +1855,11 @@ The three hidden self-assessment slides list what you should be able to do witho
 | `SO_KEEPALIVE` | after a long idle time (default 2 hours) sends small probes to check the peer is alive | off by default: extra traffic, and a few lost probes on a bad network can wrongly declare a live peer dead |
 | `TCP_NODELAY` | turns off **Nagle's algorithm**, which collects small writes into one segment | small writes go out at once (good for games, typing), but many tiny packets each carry 40 bytes of headers |
 
-> **Kid example of edge-triggered epoll.** Level-triggered is a doorbell that keeps ringing while someone stands at the door. Edge-triggered rings once when people arrive; if you don't let everyone in, the ones still waiting won't ring again.
+## Revision notes and references
+
+Technical clarifications, where the lecture material is corrected or made precise, appear in sections [2.4](#24-the-daytime-server), [3.4](#34-time_wait), [3.5](#35-port-number-ranges-and-ephemeral-ports), [5.3](#53-the-connect-function), [6.2](#62-io-models), [6.3](#63-the-select-function), [7.4](#74-c10k-and-c10m), [8.1](#81-summary). Where the slides and the course book differ, this guide follows the book and says so at that point.
+
+- W. R. Stevens, B. Fenner and A. M. Rudoff, *UNIX Network Programming, Volume 1: The Sockets Networking API*, 3rd edition: the source of the lecture's code.
+- Linux manual pages [socket(2)](https://man7.org/linux/man-pages/man2/socket.2.html), [select(2)](https://man7.org/linux/man-pages/man2/select.2.html), [shutdown(2)](https://man7.org/linux/man-pages/man2/shutdown.2.html) and [epoll(7)](https://man7.org/linux/man-pages/man7/epoll.7.html): current API semantics.
+- [RFC 9293 — TCP](https://www.rfc-editor.org/rfc/rfc9293): connection states, orderly close and TIME_WAIT.
+- D. Kegel, ["The C10K problem"](http://www.kegel.com/c10k.html): the classic overview of serving many clients.
