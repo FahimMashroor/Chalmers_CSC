@@ -6,13 +6,13 @@
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. *This session has no hidden slides, so nothing in this guide carries the † mark.*
 
-**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
+**How to read this guide.** Every part starts with **In one sentence**, the whole idea in one line. Then comes the explanation in small steps, a **Kid example** (the same idea told with everyday things), pictures, and a **Remember** list with what you must know for the exam. **Technical clarification** marks a place where the slides are wrong or unclear, and gives the correct version. **Additional context** adds something useful that is not on the slides.
 
 ---
 
 ## Glossary
 
-| Term | Expansion or category | Meaning |
+| Term | Full name | Meaning in simple words |
 |---|---|---|
 | Complete graph | — | A network where every processor is directly connected to every other processor. |
 | Globally unique identifier | — | A name (number) that belongs to exactly one processor in the whole system and is the same no matter who looks at it, like a MAC address. |
@@ -29,6 +29,7 @@
 
 ## Contents
 
+- [Before you start: the words you need](#before-you-start-the-words-you-need)
 - [1. The value-discovery problem](#1-the-value-discovery-problem)
   - [1.1 What the session covers](#11-what-the-session-covers)
   - [1.2 The problem: discovering your own secret](#12-the-problem-discovering-your-own-secret)
@@ -39,9 +40,33 @@
   - [3.1 Recap](#31-recap)
 - [Revision notes and references](#revision-notes-and-references)
 
+## Before you start: the words you need
+
+- **Processor:** one computer in the network. We call them *p*₀, *p*₁, *p*₂, and so on.
+- **Register:** a small box of memory, like a little whiteboard. Some processors may write on it, others may only read it.
+- **Secret *sᵢ*:** a value that belongs to *pᵢ*, but *pᵢ* itself **cannot** read it. Everybody else can.
+- **Complete graph:** every processor can talk directly to every other processor.
+- **Identifier (ID):** a name for a processor. A **global** ID is the same for everyone (like a passport number). A **local** ID is a private nickname (like "the friend on my left").
+- **XOR (⊕):** a way to mix two values that can be undone by mixing in the same value again.
+
+**The problem in one picture** (for *p*₀: everyone can see its secret except *p*₀ itself):
+
+```mermaid
+flowchart LR
+    S0["secret s₀"] -->|"can read"| P1["p₁"]
+    S0 -->|"can read"| P2["p₂"]
+    S0 -.-x|"cannot read"| P0["p₀"]
+```
+
+> **Kid example.** At a party, everyone has a sticker with a number on their forehead. You can see everybody's number except your own. Everyone also has a small whiteboard that only they can write on, but anyone can read. The game: everyone must find out their own number, and nobody is allowed to just say it out loud. This guide shows two clever ways to win the game.
+
 ## 1. The value-discovery problem
 
+**What this chapter is about:** what the practical session covered and the exact puzzle of Home Assignment 1: how can every processor learn its own secret, which only the others can see?
+
 ### 1.1 What the session covers
+
+**In one sentence:** the session reviewed earlier quizzes and student solutions, and then presented the proposed solution to Home Assignment 1.
 
 The session plan was:
 
@@ -52,7 +77,15 @@ The session plan was:
 
 The lecture contains the proposed solution to Home Assignment 1, which is what this guide explains.
 
+> **Kid example.** It is like a homework review lesson: first the teacher goes through the quiz answers, then a few students show their own homework, and finally the teacher shows the model answer.
+
+**Remember:**
+
+- The main content is the **proposed solution to Home Assignment 1** (value discovery).
+
 ### 1.2 The problem: discovering your own secret
+
+**In one sentence:** every processor must output its own secret, which only the other processors can read, by using the helper registers that everyone can read.
 
 **Additional context.** The slides show only the solution, so here is the problem as stated in the 2026 home assignment ("Value discovery in complete graphs").
 
@@ -74,9 +107,29 @@ The two questions differ in one thing:
 
 The answer to both is **yes, there is a solution**.
 
+> **Kid example (why the private names are a problem).** In the sticker game, imagine you can only point at people as "the person on my left" or "the person on my right". If you say "the person on my left will write my number", your friend sitting opposite may think of a totally different person as "the person on my left". So the hard part is not reading numbers; it is agreeing **who helps whom**.
+
+**The two questions side by side:**
+
+| | Question 1 | Question 2 |
+|---|---|---|
+| Names | Globally unique IDs (like MAC addresses) | Only local port numbers |
+| What fits in *rᵢ* | The ID plus one secret | Only one secret-sized value |
+| Solution idea | Virtual ring | XOR trick |
+
+**Remember:**
+
+- *pᵢ* **cannot** read *sᵢ*; all others can.
+- *rᵢ*: only *pᵢ* writes it, everybody reads it.
+- Goal: every *pᵢ* **outputs its own secret**. The answer to both questions is **yes**.
+
 ## 2. Two solutions
 
+**What this chapter is about:** two ways to solve the puzzle: with global names, line up in a ring and pass secrets along; with only private names, use the XOR trick.
+
 ### 2.1 Question 1: a solution with globally unique identifiers
+
+**In one sentence:** sort the IDs into an agreed circle; each processor copies the secret of the one before it, so the one after you holds your secret.
 
 #### Algorithm 1
 
@@ -102,10 +155,10 @@ Step by step:
 
 ```mermaid
 flowchart LR
-    subgraph RING["Virtual ring, sorted by identifier"]
-        A["p with ID 3"] -->|"next"| B["p with ID 7"] -->|"next"| C["p with ID 12"] -->|"next"| A
-    end
+    A["p with ID 3"] -->|"next"| B["p with ID 7"] -->|"next"| C["p with ID 12"] -->|"next"| A
 ```
+
+The picture above is the virtual ring, sorted by identifier.
 
 The arrows show the agreed order "who comes next" in the virtual ring; the ring is only a shared agreement, not a new physical link.
 
@@ -134,7 +187,26 @@ Three processors with identifiers 12, 3 and 7 and secrets ★, ● and ▲:
 
 Each processor outputs exactly its own secret, and none of them ever read their own *s*.
 
+> **Kid example.** The children stand in a circle, ordered by their shirt numbers. Each child looks at the forehead of the child **before** them and copies that number onto their own whiteboard. Now look at the whiteboard of the child **after** you: they copied the number of the child before them, and that is you! So their whiteboard shows your own number.
+
+**Who copies whose secret** (with the IDs 3, 7 and 12 from the example):
+
+```mermaid
+flowchart LR
+    A["ID 3 writes<br/>secret of ID 12"] ~~~ B["ID 7 writes<br/>secret of ID 3"] ~~~ C["ID 12 writes<br/>secret of ID 7"]
+```
+
+Then ID 3 reads the whiteboard of ID 7 (its next), ID 7 reads the whiteboard of ID 12, and ID 12 reads the whiteboard of ID 3 (the ring wraps around).
+
+**Remember:**
+
+- Sort the global IDs: everyone gets the **same virtual ring**.
+- Write the secret of **prev** into your own *r*; output the *r* of **next**.
+- Correct because all processors **eventually** agree on the ring; **no synchrony** is needed.
+
 ### 2.2 Question 2: a solution with only local identifiers
+
+**In one sentence:** each processor writes the XOR of all the secrets it sees; you take any other processor's register and XOR away the secrets you know, and your own secret is left.
 
 Without global identifiers, the processors cannot agree on a ring. The trick is to use **XOR (⊕)**, which works like a lock you can open again with the same key: *a* ⊕ *b* ⊕ *b* = *a*.
 
@@ -194,13 +266,41 @@ Let *n* = 4 with *s*₀ = 0101, *s*₁ = 0011, *s*₂ = 1000, *s*₃ = 1111.
 - *p*₀ picks *pⱼ* = *p*₁ (any choice works). It computes *r*₁ ⊕ *s*₂ ⊕ *s*₃ = 0010 ⊕ 1000 ⊕ 1111 = 0101.
 - 0101 is exactly *s*₀. ✔
 
+> **Kid example.** Think of XOR as a magic light switch: flipping it twice brings it back to how it was. Your friend's whiteboard shows "all the numbers except my friend's own number, mixed together". That mix contains your number. You can see every other number in the mix, so you "flip them out" one by one. The only number left in the mix is yours!
+
+**The XOR trick for *p*₀ with *n* = 3:**
+
+```mermaid
+flowchart LR
+    A["read r₁ = s₀ ⊕ s₂"] --> B["XOR in s₂, which p₀ can see"] --> C["s₀ ⊕ s₂ ⊕ s₂ = s₀"]
+```
+
+**Remember:**
+
+- Each *pᵢ* writes *rᵢ* = XOR of **all secrets it can see**.
+- *sᵢ* = *rⱼ* ⊕ (XOR of all *sₖ* with *k* not *i* and not *j*), for **any** other *pⱼ*.
+- Works with **local** names, because **any** *pⱼ* can be chosen.
+- XOR keeps the same size, so the register holds **one secret-sized value**.
+
 ## 3. Summary
 
+**What this chapter is about:** both solutions on one page.
+
 ### 3.1 Recap
+
+**In one sentence:** global IDs give a ring where secrets are passed along; local IDs use XOR to cancel out every secret except your own.
 
 - **Question 1 (global identifiers):** sort the identifiers into a virtual ring; copy your predecessor's secret; read your own secret from your successor. Works because everyone eventually agrees on the same ring.
 - **Question 2 (local identifiers only):** write the XOR of all secrets you can see; recover your own secret from any other processor's register by XOR-ing away the secrets you know. No agreement on names is needed, and registers stay constant-size.
 - In both, only the **eventual** output matters, so no synchrony assumptions are needed.
+
+> **Kid example.** Way 1: stand in a circle and pass numbers along. Way 2: mix all the numbers you see with the magic switch, and let each friend flip out what they know.
+
+**Remember:**
+
+- Global IDs: **virtual ring** (copy prev's secret, read next's register).
+- Local IDs: **XOR** (write the XOR of all visible secrets, cancel the known ones).
+- Only the **eventual** output matters, so **no synchrony** is needed.
 
 ## Revision notes and references
 
