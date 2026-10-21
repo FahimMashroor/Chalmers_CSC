@@ -6,13 +6,13 @@
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. *This lecture has no hidden slides, so nothing in this guide carries the † mark.* One visible slide does say that two topics (fault detection and Byzantine robustness) are "not covered this year"; that remark is reported where it belongs.
 
-**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
+**How to read this guide.** Every part starts with **In one sentence**, the whole idea in one line. Then comes the explanation in small steps, a **Kid example** (the same idea told with everyday things), pictures, and a **Remember** list with what you must know for the exam. **Technical clarification** marks a place where the slides are wrong or unclear, and gives the correct version. **Additional context** adds something useful that is not on the slides.
 
 ---
 
 ## Glossary
 
-| Term | Expansion or category | Meaning |
+| Term | Full name | Meaning in simple words |
 |---|---|---|
 | Adversary | — | An imagined "enemy" that controls everything the algorithm cannot control (message loss, timing, corruption). We prove an algorithm works even against the worst adversary allowed by the model. |
 | Anonymous network | — | A network where all processors run the same program and have no global names; they can still use locally unique identifiers such as port numbers. |
@@ -21,8 +21,10 @@
 | Asynchronous network | — | A network with no bound on communication delays and no clocks; processors take steps concurrently at their own speeds. |
 | Asynchronous round | — | The shortest prefix of a fair execution in which every processor takes at least one step. The usual unit of time. |
 | Byzantine failure | — | A node that behaves improperly in an arbitrary (even malicious) way, rather than just stopping. |
+| Closure | — | The second half of every proof: once in a safe configuration, the system stays legal. |
 | Communication fairness | FC | If a message is sent infinitely often, it is received infinitely often. |
 | Configuration | System state | A snapshot of the whole system: the state of every processor plus the content of every communication register or channel. Written *c*. |
+| Convergence | — | The first half of every proof: from any configuration, the system reaches a safe configuration. |
 | Crash | — | A processor that, eventually, stops taking steps forever. |
 | CRC | Cyclic Redundancy Check | An error-detection code attached to data. The model may assume it always catches corruption, but in reality some corruption slips through. |
 | DAG | Directed Acyclic Graph | A directed graph with no directed cycle. |
@@ -57,6 +59,7 @@
 
 ## Contents
 
+- [Before you start: the words you need](#before-you-start-the-words-you-need)
 - [1. Goals and motivation](#1-goals-and-motivation)
   - [1.1 Goal of the framework](#11-goal-of-the-framework)
   - [1.2 Why networks need fault tolerance and self-stabilization](#12-why-networks-need-fault-tolerance-and-self-stabilization)
@@ -77,9 +80,30 @@
   - [4.1 Recap: the chain of definitions](#41-recap-the-chain-of-definitions)
 - [Revision notes and references](#revision-notes-and-references)
 
+## Before you start: the words you need
+
+This lecture is the "rule book" for the whole second half of the course. A few words come back in every later lecture.
+
+- **Processor (node):** one small computer in the network, written *p₁*, *p₂*, …. It has some memory (its **state**).
+- **Configuration:** a photo of the **whole** network at one moment: every processor's memory plus everything that is "in the wires".
+- **Step:** one processor does one small thing (reads, writes, sends or receives). Each step changes the photo a little.
+- **Execution:** the whole film: photo, step, photo, step, ….
+- **Self-stabilizing:** no matter how messed up the first photo is, the film eventually shows the network working correctly, and it **stays** correct.
+
+```mermaid
+flowchart LR
+  C0["photo c0<br/>(maybe all wrong)"] -->|"step"| C1["photo c1"] -->|"step"| C2["photo c2"] -->|"..."| CS["safe photo:<br/>correct from now on"] -->|"step"| CL["still correct"]
+```
+
+> **Kid example.** A class of children sits in a circle. Someone has shuffled all their name tags and books (a messed-up first photo). A self-stabilizing rule is a simple rule every child follows again and again, like "if your neighbour's tag is wrong, fix yours". No teacher steps in, yet after a while the circle is tidy, and it stays tidy.
+
 ## 1. Goals and motivation
 
+**What this chapter is about:** why we need a precise mathematical "rule book" for networks, and why networks should repair themselves.
+
 ### 1.1 Goal of the framework
+
+**In one sentence:** to design self-stabilizing protocols we need precise ways to **define tasks**, **propose algorithms** and **prove** that they are correct.
 
 The goal of this part of the course is to understand **how to design self-stabilizing network protocols**. To do that we need an **analytical framework**, that is, a precise mathematical way of talking about networks. The framework must let us do three things:
 
@@ -89,7 +113,21 @@ The goal of this part of the course is to understand **how to design self-stabil
 
 Think of it like the rule book of a board game. Before you can argue whether a strategy always wins, everybody must agree on exactly what a "move" is, what the board looks like and what the opponent is allowed to do. This lecture writes that rule book. Every later algorithm (Dijkstra's token ring, spanning tree, matching, leader election) is described and proved in this language.
 
+```mermaid
+flowchart LR
+  A["1. Define the task<br/>(what is 'correct'?)"] --> B["2. Propose an algorithm"] --> C["3. Prove it is correct"]
+```
+
+> **Kid example.** Before two children can argue who won at a board game, they must agree on the rules: how a piece moves, what the board looks like, what counts as winning. This lecture is that rule sheet, written for networks.
+
+**Remember:**
+
+- The framework lets us **define tasks**, **propose algorithms**, **prove correctness**.
+- Every later algorithm in the course uses this language.
+
 ### 1.2 Why networks need fault tolerance and self-stabilization
+
+**In one sentence:** good networks must be general, scalable and robust, and **self-stabilizing** algorithms make them recover from any corrupted state **without human help**.
 
 #### Perlman's vision of the Internet
 
@@ -108,6 +146,16 @@ Following Perlman, the lecture lists properties that a good network architecture
 
 The lecture explicitly says that **fault detection and Byzantine robustness are not covered this year**. The focus is self-stabilization.
 
+```mermaid
+flowchart TB
+  N["A good network (Perlman)"] --> S1[Scope]
+  N --> S2[Scalability]
+  N --> S3["Robustness<br/>(safety barriers)"]
+  N --> S4["Self-stabilization<br/>THIS COURSE"]
+  N --> S5["Fault detection<br/>(not this year)"]
+  N --> S6["Byzantine robustness<br/>(not this year)"]
+```
+
 #### What self-stabilizing algorithms offer
 
 A self-stabilizing algorithm can start from an **arbitrary, possibly incorrect state** and still recover and keep working correctly by itself. Its key characteristics are:
@@ -120,9 +168,21 @@ A self-stabilizing algorithm can start from an **arbitrary, possibly incorrect s
 
 Typical uses are routing protocols, consensus, distributed databases and fault-tolerant distributed systems; for example, a routing protocol recovering after topology changes.
 
+> **Kid example.** A self-stabilizing network is like a roly-poly toy (a tumbler). However hard you push it over, and in whatever direction, it rocks back and stands up again by itself. Nobody has to come and set it upright.
+
+**Remember:**
+
+- **Radia Perlman**: made RIP and ARPANET routing broadcast self-stabilizing; self-stabilizing spanning tree for bridges (1985).
+- Properties: **scope, scalability, robustness** (safety barriers), **self-stabilization**, fault detection and Byzantine robustness (the last two **not covered this year**).
+- Self-stabilization: **autonomous recovery** from **any** state, tolerant to transient faults, **local** decisions, **convergence** to safety + liveness, **minimal assumptions**.
+
 ## 2. Algorithms, models and network settings
 
+**What this chapter is about:** what an algorithm and a model are, the questions you must answer about any network before designing for it, how we draw networks as graphs, how processors are named, how they talk (messages or shared memory), and synchronous versus asynchronous timing.
+
 ### 2.1 Algorithms and models
+
+**In one sentence:** an **algorithm** is a precise recipe for a task, and a **model** is a simplified exact description of the network that lets us analyse and prove things about the recipe.
 
 #### What is an algorithm?
 
@@ -135,7 +195,7 @@ An **algorithm** is a step-by-step set of well-defined instructions, or a system
 - **Modularity:** complex problems are broken into smaller subproblems that are solved separately.
 - **Optimization:** some algorithms optimize a criterion such as time or space.
 
-In this course the efficiency measure we focus on is **the stabilization time** (Section 3.5).
+In this course the efficiency measure we focus on is **the stabilization time** ([section 3.5](#35-complexity-measures-rounds-and-cycles)).
 
 #### Why do we need models?
 
@@ -149,7 +209,16 @@ A **model** is a simplified, exact description of the network that keeps only wh
 - **Generalization:** once an algorithm is analysed in a model, its properties carry over to real systems with similar characteristics.
 - **Communication:** they give researchers and engineers a common language.
 
+> **Kid example.** An algorithm is a cake recipe: exact steps, for one kind of cake, and it should work every time. A model is like a toy model of your kitchen: it leaves out the colour of the curtains, but keeps the oven, the table and the fridge, so you can plan the baking on paper.
+
+**Remember:**
+
+- Algorithm: **precise**, **problem-specific**, **correct** (proved), **efficient**, **modular**, maybe **optimizing**. Our efficiency measure: **stabilization time**.
+- Models give: abstraction, task formalization, analysis, benchmarking, design insight, generalization, a common language.
+
 ### 2.2 Network settings
+
+**In one sentence:** before studying any algorithm, ask what the **topology**, **communication**, **synchrony**, **node behaviour**, **failure detection**, **resources** and **fault model** are.
 
 The **network settings** are the set of assumptions and characteristics on which we design and analyse protocols. Before studying any algorithm, always ask these questions:
 
@@ -162,34 +231,66 @@ The **network settings** are the set of assumptions and characteristics on which
 
 The settings also include a **fault model**: which faults may happen (link failures, node failures, message loss, network partitions) and how severe they are.
 
-When delays are unbounded and nodes have no clocks, the network is **asynchronous**, and then we must state fairness assumptions (Section 3.2).
-
-### 2.3 Network topology and graphs
-
-**Network topology** describes how the parts of a communication network (nodes and links) are organized, physically or logically. We draw it as a **graph**: each communicating device is a **node** (a dot) and each connection is a **link** (a line). A partial map of the real Internet is a huge, irregular graph; a network diagram in documentation is a small one.
-
-Common topologies are rings, meshes, stars, fully connected graphs, lines, trees and buses. The diagram below shows four of them with five or six nodes each. Lines have no arrowheads because the links are two-way.
+When delays are unbounded and nodes have no clocks, the network is **asynchronous**, and then we must state fairness assumptions ([section 3.2](#32-representing-failures-and-fairness)).
 
 ```mermaid
 flowchart LR
-    subgraph Ring
-        r1((1)) --- r2((2)) --- r3((3)) --- r4((4)) --- r5((5)) --- r1
-    end
-    subgraph Star
-        sc((c)) --- s1((1))
-        sc --- s2((2))
-        sc --- s3((3))
-        sc --- s4((4))
-    end
-    subgraph Line
-        l1((1)) --- l2((2)) --- l3((3)) --- l4((4))
-    end
-    subgraph Tree
-        t1((1)) --- t2((2))
-        t1 --- t3((3))
-        t2 --- t4((4))
-        t2 --- t5((5))
-    end
+  Q["Network settings:<br/>always ask"] --> T[Topology?]
+  Q --> C["Communication?<br/>datagrams, streams,<br/>shared memory; reliable?"]
+  Q --> S["Synchrony?<br/>clocks, delays, fairness"]
+  Q --> B["Node behaviour?<br/>crash, Byzantine, benign"]
+  Q --> D[Failure detection?]
+  Q --> R[Resources?]
+  Q --> F["Fault model?<br/>which faults, how bad"]
+```
+
+> **Kid example.** Before planning a school trip, you ask: where are we going (topology), how will we talk to each other (phones or shouting), do we all have watches (synchrony), might someone get lost or play tricks (node behaviour), will we notice if someone is missing (failure detection), and how much money do we have (resources)?
+
+**Remember:**
+
+- Seven questions: **topology, communication, synchrony (+ fairness), node behaviour, failure detection, resource constraints, fault model**.
+- No clocks + unbounded delays = **asynchronous** → we must state **fairness** assumptions.
+
+### 2.3 Network topology and graphs
+
+**In one sentence:** we draw a network as a **graph** of nodes (dots) and links (lines); each node, whatever it really is, is modelled as a **finite state machine** called a processor.
+
+**Network topology** describes how the parts of a communication network (nodes and links) are organized, physically or logically. We draw it as a **graph**: each communicating device is a **node** (a dot) and each connection is a **link** (a line). A partial map of the real Internet is a huge, irregular graph; a network diagram in documentation is a small one.
+
+Common topologies are rings, meshes, stars, fully connected graphs, lines, trees and buses. The diagrams below show four of them with five or six nodes each. Lines have no arrowheads because the links are two-way.
+
+**Ring:**
+
+```mermaid
+flowchart LR
+  r1((1)) --- r2((2)) --- r3((3)) --- r4((4)) --- r5((5)) --- r1
+```
+
+**Star (c is the centre):**
+
+```mermaid
+flowchart LR
+  sc((c)) --- s1((1))
+  sc --- s2((2))
+  sc --- s3((3))
+  sc --- s4((4))
+```
+
+**Line:**
+
+```mermaid
+flowchart LR
+  l1((1)) --- l2((2)) --- l3((3)) --- l4((4))
+```
+
+**Tree (1 is the root):**
+
+```mermaid
+flowchart TB
+  t1((1)) --- t2((2))
+  t1 --- t3((3))
+  t2 --- t4((4))
+  t2 --- t5((5))
 ```
 
 In a **fully connected** (complete) graph every node is linked to every other node; a **mesh** has many but not all such links; a **bus** connects all nodes to one shared line.
@@ -198,26 +299,34 @@ In a **fully connected** (complete) graph every node is linked to every other no
 
 In a **directed graph** each link has a direction. A **directed ring** sends information around in one direction only. A **directed acyclic graph (DAG)** has directed links but no directed cycle: you can never follow arrows and come back to where you started.
 
+**Directed ring:**
+
 ```mermaid
 flowchart LR
-    subgraph DR["Directed ring"]
-        d1((1)) --> d2((2))
-        d2 --> d4((4))
-        d4 --> d3((3))
-        d3 --> d1
-    end
-    subgraph DAG["Directed acyclic graph"]
-        n5((5)) --> n11((11))
-        n7((7)) --> n11
-        n7 --> n8((8))
-        n3((3)) --> n8
-        n3 --> n10((10))
-        n11 --> n2((2))
-        n11 --> n9((9))
-        n11 --> n10
-        n8 --> n9
-    end
+  d1((1)) --> d2((2))
+  d2 --> d4((4))
+  d4 --> d3((3))
+  d3 --> d1
 ```
+
+**Directed acyclic graph (DAG):**
+
+```mermaid
+flowchart LR
+  n5((5)) --> n11((11))
+  n7((7)) --> n11
+  n7 --> n8((8))
+  n3((3)) --> n8
+  n3 --> n10((10))
+  n11 --> n2((2))
+  n11 --> n9((9))
+  n11 --> n10
+  n8 --> n9
+```
+
+The second picture is the **DAG**: start anywhere and follow the arrows; you always end at 2, 9 or 10, and you never come back to where you began.
+
+> **Kid example.** A ring is children holding hands in a circle. A star is one teacher with each child holding a string to the teacher. A line is children standing in a queue. A tree is a family tree. A directed ring is a game of "pass the parcel" that only goes clockwise.
 
 #### What does a node represent?
 
@@ -233,7 +342,26 @@ A node in the graph is any **computing and communication entity**. Depending on 
 
 Whatever it is, **each node is modelled as a finite state machine**. There are *n* such automata in the system and we call them **processors**. The next question is how these processors communicate.
 
+```mermaid
+stateDiagram-v2
+  direction LR
+  Idle --> Reading: time to read
+  Reading --> Computing: got neighbour values
+  Computing --> Writing: computed new value
+  Writing --> Idle: done
+```
+
+The picture shows a tiny **finite state machine**: a fixed list of states and rules for moving between them. Every processor in the model is a machine like this (usually with more states).
+
+**Remember:**
+
+- Topology = graph of **nodes** and **links**: ring, mesh, star, fully connected, line, tree, bus.
+- **Directed** graph: links have directions; **directed ring**; **DAG** = no directed cycle.
+- A node can be anything from an autonomous system to a thread; it is modelled as a **finite state machine** = **processor**; there are ***n*** of them.
+
 ### 2.4 Processors and identifiers
+
+**In one sentence:** *pᵢ* is just our name for a processor; whether the processor **itself** has a usable name (global ID, local port number, or none) is an important assumption.
 
 We write *pᵢ* for the *i*-th processor. The index *i* is **only a notation** for us as observers: it does not mean that the processor itself knows a number *i*. The **neighbours** of *pᵢ* are the processors that can communicate directly with *pᵢ*, and a link *pᵢ* ↔ *pⱼ* means that *pᵢ* can communicate with *pⱼ*.
 
@@ -244,9 +372,26 @@ Whether processors have names that they themselves can use is an important assum
 - **Anonymous networks.** All processors run **the same program** and have access only to locally unique identifiers.
 - **Semi-anonymous networks.** All processors run the same program **except exactly one**, called the **distinguished processor**. Example: one server and many clients.
 
+```mermaid
+flowchart LR
+  G["Globally unique IDs<br/>no two the same<br/>(MAC address)"] ~~~ L["Locally unique IDs only<br/>(port 1, port 2 on each node)"]
+  L ~~~ A["Anonymous network<br/>same program everywhere,<br/>only local IDs"]
+  A ~~~ S["Semi-anonymous network<br/>same program except ONE<br/>distinguished processor"]
+```
+
+> **Kid example.** Globally unique IDs are like passport numbers: no two people in the world share one. Locally unique IDs are like "my left hand" and "my right hand": they only make sense to you. An anonymous class is a class of identical twins in identical uniforms who can only say "the child on my left". A semi-anonymous class is the same, plus one teacher who is clearly different.
+
 **Additional context (course quiz).** without global identifiers, can a sender tell its receivers apart? The quiz's answer is "it depends on our assumptions"; for example, if locally unique identifiers (ports) exist, it can. The same holds in semi-anonymous networks.
 
+**Remember:**
+
+- *pᵢ*: the index *i* is **only our notation**; the processor need not know it.
+- **Global IDs** (e.g. MAC), **local IDs** (e.g. port numbers), **anonymous** (same program, only local IDs), **semi-anonymous** (same program except one **distinguished processor**).
+- Without global IDs a sender can still tell receivers apart if it has **local IDs**: "it depends on our assumptions".
+
 ### 2.5 Communication: message passing versus shared memory
+
+**In one sentence:** processors talk either by **sending messages** (queues) or by **reading and writing shared registers**; the course uses shared memory, which RDMA makes realistic for networks.
 
 There are two ways to model how neighbours talk:
 
@@ -254,38 +399,31 @@ There are two ways to model how neighbours talk:
 - **Shared memory.** Processes communicate by **writing to and reading from shared memory**.
 
 ```mermaid
-flowchart TB
-    subgraph MP["Message passing"]
-        direction TB
-        subgraph M1["Machine 1"]
-            P1["Process 1 + own memory"]
-        end
-        subgraph M2["Machine 2"]
-            P2["Process 2 + own memory"]
-        end
-        subgraph M3["Machine 3"]
-            P3["Process 3 + own memory"]
-        end
-        NET["The network"]
-        P1 <-- messages --> NET
-        P2 <-- messages --> NET
-        P3 <-- messages --> NET
-    end
-    subgraph SM["Shared memory"]
-        direction TB
-        Q1["Process 1"]
-        Q2["Process 2"]
-        Q3["Process 3"]
-        MEM["Shared memory (registers)"]
-        Q1 <-- "read / write" --> MEM
-        Q2 <-- "read / write" --> MEM
-        Q3 <-- "read / write" --> MEM
-    end
+flowchart LR
+  P1["MESSAGE PASSING<br/>Process 1 + own memory"] <-->|messages| NET["the network"]
+  P2["Process 2 + own memory"] <-->|messages| NET
+  P3["Process 3 + own memory"] <-->|messages| NET
 ```
+
+```mermaid
+flowchart LR
+  Q1["SHARED MEMORY<br/>Process 1"] <-->|"read / write"| MEM["shared memory<br/>(registers)"]
+  Q2["Process 2"] <-->|"read / write"| MEM
+  Q3["Process 3"] <-->|"read / write"| MEM
+```
+
+> **Kid example.** Message passing is like sending letters: each child writes a note and posts it; notes may arrive later. Shared memory is like a classroom whiteboard: you write your answer on your part of the board, and your neighbour simply looks at it.
 
 The course **focuses on the shared-memory model**, and a later lecture shows how to **transfer an algorithm from shared memory to message passing**.
 
 Why is shared memory relevant for networks at all? Because of **Remote Direct Memory Access (RDMA)**. With ordinary sockets, data travels from the application through the kernel's socket layer, TCP, IPv4/IPv6 and the device driver. RDMA lets an application place data directly into a remote machine's memory, bypassing the kernel ("kernel bypass") through the host channel adapter. The latency difference is large: socket-based communication is typically in the **milliseconds** range (more under congestion), while RDMA can reach the **microseconds** range, as low as 1–2 μs on technologies such as InfiniBand or RoCE. These numbers are rough and depend on hardware, software and network conditions.
+
+```mermaid
+flowchart TB
+  A["Sockets:<br/>application → socket layer → TCP → IPv4/IPv6 → driver<br/>milliseconds"]
+  B["RDMA:<br/>application → host channel adapter → remote memory<br/>(kernel bypass) microseconds, as low as 1–2 μs"]
+  A ~~~ B
+```
 
 **Additional context (course quiz).** the quiz gives three reasons for studying shared-memory algorithms in a networks course: they are simpler to design and prove; the course teaches a transformation to message passing; and modern networks use RDMA.
 
@@ -294,9 +432,24 @@ Why is shared memory relevant for networks at all? Because of **Remote Direct Me
 - **Shared memory:** *rᵢ* is the content of the communication register of processor *pᵢ*. Alternatively, *pᵢ* has a vector of registers *rᵢ,₁*, *rᵢ,₂*, …, *rᵢ,ⱼ*, … with one register per neighbour: *pᵢ* can **write** *rᵢ,ⱼ* but *pⱼ* can **only read** it.
 - **Message passing:** *qᵢ,ⱼ* is a **FIFO queue** of the messages sent from *pᵢ* to *pⱼ* that have not been received yet. Sending adds a message at the tail; receiving takes the message at the head.
 
+```mermaid
+flowchart LR
+  PI["pᵢ"] -->|"writes"| R["register rᵢ,ⱼ<br/>(holds ONE value:<br/>the last written)"] -->|"reads"| PJ["pⱼ"]
+  PI2["pᵢ"] -->|"send: add at tail"| Q["queue qᵢ,ⱼ<br/>m1, m2, m3 ..."] -->|"receive: take from head"| PJ2["pⱼ"]
+```
+
 **Additional context (Dolev §2.1).** a bidirectional link between *pᵢ* and *pⱼ* is modelled by two queues, *qᵢ,ⱼ* and *qⱼ,ᵢ*. A register always holds only the last value written; a queue can hold many messages.
 
+**Remember:**
+
+- **Message passing** (send/receive) vs **shared memory** (write/read). The course **focuses on shared memory**, and later shows how to convert to message passing.
+- Why shared memory matters: **RDMA** (kernel bypass): **microseconds** (1–2 μs) vs sockets' **milliseconds**.
+- Quiz reasons: simpler to design and prove, a transformation exists, RDMA.
+- Register *rᵢ,ⱼ*: *pᵢ* writes, *pⱼ* only reads; holds **the last value**. Queue *qᵢ,ⱼ*: **FIFO**, many messages; two queues per two-way link.
+
 ### 2.6 Synchronous and asynchronous programming style
+
+**In one sentence:** in a **synchronous** network everyone moves together on a clock pulse; in an **asynchronous** one there are no clocks and no delay bounds, so everyone moves at their own pace.
 
 How a processor's program looks depends on the timing assumption.
 
@@ -312,22 +465,28 @@ How a processor's program looks depends on the timing assumption.
 
 ```mermaid
 flowchart LR
-    subgraph Sync["Synchronous, on each clock pulse"]
-        direction TB
-        A1["receive all / read all"] --> A2["finite internal computation"] --> A3["send all / write all"]
-    end
-    subgraph AsyncMP["Asynchronous message passing, event driven"]
-        direction TB
-        B1{"If condition holds"} --> B2["finite internal computation"] --> B3["send"]
-        B4{"Message arrives"} --> B5["finite internal computation"]
-    end
+  A1["SYNCHRONOUS, each clock pulse:<br/>receive all / read all"] --> A2["finite internal computation"] --> A3["send all / write all"]
+  B1["ASYNCHRONOUS message passing:<br/>if a condition holds"] --> B2["finite internal computation"] --> B3["send"]
+  B4["or: a message arrives"] --> B5["finite internal computation"]
 ```
+
+> **Kid example.** Synchronous is a dance class where everyone moves on the teacher's clap: clap, step; clap, step. Asynchronous is a playground: every child moves whenever they like, some fast, some slow, and nobody waits for a clap.
 
 **Additional context (course quiz).** synchronous algorithms are **not** automatically faster. Synchrony is implemented with timers that must be long enough for the slowest processor and the longest delay, so everybody waits for the slowest; in an asynchronous algorithm each processor continues as soon as it can.
 
+**Remember:**
+
+- **Synchronous**: bounded delays, steps **simultaneous on a clock pulse**: receive/read all → compute → send/write all.
+- **Asynchronous**: **no delay bound, no clocks**, each at its own pace. Shared memory: same read-compute-write shape; message passing: **event driven** (condition true → compute, send; message arrives → compute).
+- Synchronous is **not automatically faster**: everyone waits for the slowest.
+
 ## 3. Executions, faults and self-stabilization
 
+**What this chapter is about:** the exact definitions behind every proof: states, configurations, steps and executions; what the "adversary" may do and the fairness rules that limit it; transient faults; what self-stabilizing means (legal executions, safe configurations); and how we measure time (rounds and cycles).
+
 ### 3.1 States, configurations, steps and executions
+
+**In one sentence:** a **configuration** is a snapshot of all states and channels, a **step** changes it a little, and an **execution** is the sequence configuration, step, configuration, step, ….
 
 #### Processor state
 
@@ -343,24 +502,29 @@ c = (s_1, s_2, \dots, s_n,\; r_{1,2}, r_{1,3}, \dots, r_{i,j}, \dots, r_{n,n-1})
 
 where *sᵢ* is the state of *pᵢ* and *rᵢ,ⱼ* is the content of the communication channels or registers. Looking from one processor: the configuration contains **the values of all local variables** and **the values of the incoming communication channels** of every processor.
 
+```mermaid
+block-beta
+  columns 4
+  s1["s₁<br/>state of p₁"] s2["s₂<br/>state of p₂"] s3["..."] sn["sₙ<br/>state of pₙ"]
+  r12["r₁,₂"] r13["r₁,₃"] r3["..."] rn["rₙ,ₙ₋₁"]
+```
+
+The picture is one configuration *c*: the top row is every processor's state, the bottom row is every register (or channel).
+
+> **Kid example.** A configuration is a photo of the whole classroom at one moment: what every child has in their head and what is written on every part of the whiteboard. A step is one child doing one thing (reading the board or writing on it). An execution is the film made of all the photos and all the moves.
+
 #### Computation steps
 
 A **step** is one move of one processor. In the shared-memory model a step is a write or a read; in the message-passing model it is a send or a receive. The lecture's two examples, written as sequences of configurations:
 
 ```mermaid
 flowchart LR
-    subgraph SMx["Shared memory"]
-        direction LR
-        c0["r12 = x"] -- "P1 writes m1" --> c1["r12 = m1"] -- "P2 reads" --> c2["r12 = m1, P2 now holds m1"]
-    end
+  c0["Shared memory:<br/>r12 = x"] -- "P1 writes m1" --> c1["r12 = m1"] -- "P2 reads" --> c2["r12 = m1, P2 now holds m1"]
 ```
 
 ```mermaid
 flowchart LR
-    subgraph MPx["Message passing"]
-        direction LR
-        d0["q12 = (m1)<br/>q21 = (m2, m3)"] -- "p2 sends m4" --> d1["q12 = (m1)<br/>q21 = (m2, m3, m4)"] -- "p1 receives m2" --> d2["q12 = (m1)<br/>q21 = (m3, m4)<br/>p1 holds m2"]
-    end
+  d0["Message passing:<br/>q12 = (m1)<br/>q21 = (m2, m3)"] -- "p2 sends m4" --> d1["q12 = (m1)<br/>q21 = (m2, m3, m4)"] -- "p1 receives m2" --> d2["q12 = (m1)<br/>q21 = (m3, m4)<br/>p1 holds m2"]
 ```
 
 Notice the FIFO rule: *p₂*'s new message *m₄* goes to the **tail** of *q₂,₁*, and *p₁* receives *m₂* from the **head**.
@@ -384,7 +548,19 @@ E = (c_0, a_0, c_1, a_1, \dots) \quad\text{such that}\quad c_{i-1} \xrightarrow{
 
 This way of presenting executions, one step at a time, is called the **interleaving model**. In reality processors run in parallel, but we pretend that at each moment exactly one processor takes one step. (The lecture's index condition reads "(i > 1)" and the book numbers configurations from *c*₁; the meaning is simply that every configuration after the first is obtained from the previous one by one step.)
 
+> **Kid example of the interleaving model.** Many children are talking at the same time, but when you write down what happened, you write it as one list: "Anna said…, then Bo said…, then Anna said…". We always describe the network as one such list of moves, one at a time.
+
+**Remember:**
+
+- **State** *sᵢ* = all local variables of *pᵢ*.
+- **Configuration** *c* = all states *s₁ … sₙ* + all registers/channels *rᵢ,ⱼ*.
+- **Step** *a* = one processor, one communication operation (write/read or send/receive) plus internal computation.
+- *c₁* →ᵃ *c₂*: *c₂* reached from *c₁* by step *a*. *a* is **applicable** to *c* iff some *c′* exists with *c* →ᵃ *c′*.
+- **Execution** *E* = (*c₀*, *a₀*, *c₁*, *a₁*, …), one step at a time: the **interleaving model**.
+
 ### 3.2 Representing failures and fairness
+
+**In one sentence:** the adversary may lose, duplicate, reorder or corrupt messages and slow processors down, but **fairness** rules stop it from breaking a channel or a processor completely.
 
 #### What the adversary can do to channels
 
@@ -406,6 +582,8 @@ flowchart LR
 
 The loss step removes *m*₃ from the queue. The reorder step swaps the remaining messages, so *m*₄ will now be received before *m*₂. (The lecture labels the second step "reorder₂₁(*m*₃, *m*₄)", but *m*₃ has already been lost and the result shows *m*₂ and *m*₄ swapped; the result (*m*₄, *m*₂) is what matters.) Throughout, *q*₁,₂ = (*m*₁) is unchanged.
 
+> **Kid example.** The adversary is a naughty postman. With letters (message passing) he can lose one, deliver one twice, swap their order, or smudge the writing. With a whiteboard (shared memory) he can only smudge what is written, because there is just one thing written in each box.
+
 #### How often can a message be omitted? Communication fairness
 
 If messages are omitted "too often", the channel is simply broken. So what is the **maximum power** we can give the adversary to drop messages **without** letting it make the channel completely non-functional? The answer is the **communication fairness (FC)** property:
@@ -416,6 +594,15 @@ Two consequences:
 
 - **NB-1:** FC still holds even if an **infinite number of messages are lost** over the whole (infinite) execution.
 - **NB-2:** between any two successful deliveries **only a finite number** of messages may be lost. Otherwise the channel is faulty: if FC fails, the sender can only get a finite number of messages through, after which the receiver never hears anything again; the link is broken.
+
+```mermaid
+flowchart LR
+  S1["send ✘ lost"] --> S2["send ✘ lost"] --> S3["send ✔ arrives"] --> S4["send ✘ lost"] --> S5["send ✔ arrives"] --> S6["... forever"]
+```
+
+Fair channel: many messages may be lost, even infinitely many in total, but if you keep sending, **some always get through again** (only a finite number of losses between two deliveries).
+
+> **Kid example.** You keep throwing paper planes to a friend across a windy playground. Lots of them blow away, even very many over the whole day. But as long as some keep reaching your friend now and then, the "plane line" still works. If after some moment **none** ever arrive again, the line is broken.
 
 #### Node failures: crashes, slow processors and execution fairness
 
@@ -430,9 +617,27 @@ Consequences:
 - Even if Frontier takes an exponentially growing number of steps more than the Arduino, the execution is still **fair**, as long as the Arduino keeps taking steps.
 - If some set of processors takes an infinite number of steps while Frontier (or the Arduino) takes **no** step, then Frontier (respectively the Arduino) is **crashed**.
 
+```mermaid
+flowchart LR
+  F["Frontier:<br/>more than 10¹² steps<br/>per Arduino step"] --- A["Arduino:<br/>very slow, but keeps<br/>taking steps"]
+  A --> OK["execution is FAIR<br/>(slow ≠ crashed)"]
+  X["a processor that takes<br/>NO step while others<br/>take infinitely many"] --> C["CRASHED"]
+```
+
+> **Kid example.** A snail and a cheetah race forever. The cheetah runs a million laps for each tiny step of the snail. That is still a fair race, because the snail keeps moving. Only if the snail stops moving **forever** do we say it has "crashed".
+
 **Additional context (Dolev §2.1).** message loss is modelled by an environment step loss*ᵢ,ⱼ*(*m*), applicable when *m* is in *qᵢ,ⱼ*. Fairness does **not** require loss steps to happen infinitely often, but it does require that a message sent infinitely often is received infinitely often.
 
+**Remember:**
+
+- Message passing adversary: **corruption, omission, duplication, reordering**. Shared memory: **only corruption**.
+- Failures are extra **environment steps** (e.g. loss₂₁(*m₃*), reorder₂₁).
+- **Communication fairness (FC)**: sent infinitely often ⇒ received infinitely often. NB-1: infinitely many losses are still allowed; NB-2: only **finitely many** losses between two deliveries.
+- **Crashed** = eventually stops taking steps forever. **Execution fairness**: every step applicable infinitely often is executed infinitely often. Slow (Arduino vs Frontier, 10¹²) is **not** crashed.
+
 ### 3.3 Arbitrary transient faults
+
+**In one sentence:** a **transient fault** is any temporary break of the design assumptions (such as undetected corruption), and many of them can leave the network in a **completely arbitrary** state.
 
 **Arbitrary transient faults** represent **any violation of the assumptions** under which the system and network were designed to behave. For example:
 
@@ -442,9 +647,27 @@ Consequences:
 
 This raises the central question of the course: **if a network starts in an arbitrary configuration, how can the algorithm make the network present a legal behaviour, that is, satisfy the problem definition?**
 
+```mermaid
+flowchart LR
+  A["assumption:<br/>CRC always catches corruption"] --> B["reality: some corruption<br/>is NOT caught"]
+  B --> C["wrong information<br/>spreads"]
+  C --> D["many such faults:<br/>ARBITRARY configuration"]
+  D --> E["question: can the algorithm<br/>still reach legal behaviour?"]
+```
+
+> **Kid example.** A storm blows through the classroom: papers everywhere, the whiteboard half wiped, name tags swapped. We don't know exactly what happened, and we don't care. The question is only: if everyone follows the class rules from **now** on, will the room become tidy again?
+
 **Additional context (course quiz and Dolev ch. 1).** we analyse the system **after the last transient fault**. In proofs we therefore assume that all faults happened before the execution starts, and the execution begins in whatever arbitrary configuration they left. A processor that crashes and later resumes in some random state can also be treated as a transient fault.
 
+**Remember:**
+
+- Transient fault = **any violation of the design assumptions** (e.g. CRC misses corruption → stale information spreads).
+- Combinations of them → **arbitrary state**.
+- We analyse **after the last transient fault**: the execution simply starts in an arbitrary configuration.
+
 ### 3.4 Self-stabilization: legal executions and safe configurations
+
+**In one sentence:** an algorithm is **self-stabilizing** if every fair execution, from any configuration, reaches a **safe configuration**, after which everything that happens is **legal** (in LE).
 
 A **self-stabilizing network** can be started in **any arbitrary configuration** and will **eventually exhibit a desired "legal" behaviour**.
 
@@ -480,11 +703,31 @@ The dotted arrows mean "possibly many more steps". The definitions split into tw
 1. **Convergence:** from any configuration, every fair execution reaches a safe configuration.
 2. **Closure:** once in a safe configuration, every fair execution stays legal (that is the definition of "safe").
 
+```mermaid
+flowchart LR
+  A["any configuration"] -->|"CONVERGENCE:<br/>every fair execution gets here"| S["safe configuration"]
+  S -->|"CLOSURE:<br/>stays legal forever"| L["legal execution (LE)"]
+```
+
+> **Kid example.** A marble dropped anywhere into a big bowl. Wherever you drop it (any configuration), it rolls down (convergence) and reaches the bottom area (a safe configuration). Once there, it can wobble a little, but it never climbs back out (closure).
+
 *Example of LE (Dolev §2.2):* for mutual exclusion, LE is the set of executions in which, in every configuration, at most one processor is in the critical section, and every processor is in the critical section in infinitely many configurations.
 
 **Additional context (Dolev §2.3).** a self-stabilizing algorithm **never terminates**. If every processor had a "terminated" state, then the configuration where all processors are terminated would have to be safe (nothing ever happens from it), so the task would be trivial and need no communication. That is why self-stabilizing code is a do-forever loop that keeps communicating with neighbours.
 
+**Remember:**
+
+- **LE** = set of legal executions, defined for a **particular system and task**.
+- Every execution has a **suffix** in LE.
+- **Safe configuration**: every fair execution starting from it is in LE.
+- **Self-stabilizing**: every fair execution **reaches a safe configuration**.
+- Proofs = **convergence** + **closure**.
+- Mutual exclusion LE: at most one in the critical section, everyone gets in infinitely often.
+- Self-stabilizing algorithms **never terminate** (do-forever loop).
+
 ### 3.5 Complexity measures: rounds and cycles
+
+**In one sentence:** without clocks we measure time in **asynchronous rounds** (until every processor has taken a step) or **cycles** (until every processor has finished a whole loop), and the **stabilization time** is the number of rounds to reach a safe configuration.
 
 #### Asynchronous rounds
 
@@ -508,16 +751,12 @@ The second round is the first round of *E″* = (*c*₄, *aⁱ*₅, *c*₅, …)
 
 ```mermaid
 flowchart LR
-    c0((c0)) -- "a1 by pi" --> c1((c1)) -- "a2 by pi" --> c2((c2)) -- "a3 by pi" --> c3((c3)) -- "a4 by pj" --> c4((c4)) -- "a5 by pi" --> c5((c5)) -.-> more["…"]
-    subgraph R1["Round 1: ends when pj has moved too"]
-        c0
-        c1
-        c2
-        c3
-    end
+  c0((c0)) -- "a1 by pi" --> c1((c1)) -- "a2 by pi" --> c2((c2)) -- "a3 by pi" --> c3((c3)) -- "a4 by pj:<br/>ROUND 1 ENDS" --> c4((c4)) -- "a5 by pi:<br/>round 2 starts" --> c5((c5)) -.-> more["…"]
 ```
 
 A round stretches until the **slowest** processor has moved, so speed differences are "cancelled out". (One intermediate slide writes the first round with step indices 0–3; the next slide corrects it to the version above.)
+
+> **Kid example.** A teacher counts "rounds" in a game: one round is over when **every** child has had at least one turn. If Anna takes three quick turns before Bo takes a first turn, the round only ends when Bo has moved. So a round is as long as the slowest child needs.
 
 #### Asynchronous cycles
 
@@ -527,11 +766,32 @@ The **first asynchronous cycle** in an execution *E* is the **shortest prefix** 
 
 (The lecture's last line says "the second asynchronous *round*"; in this definition it means the second asynchronous **cycle**.)
 
+```mermaid
+flowchart LR
+  R["read neighbour 1,<br/>read neighbour 2, ...<br/>(about Δ steps)"] --> C["compute"] --> W["write"] --> R
+```
+
+One iteration of the do-forever loop takes **O(Δ)** steps; a **cycle** ends when every processor has finished at least one whole iteration.
+
+> **Kid example.** A round is "everyone has said at least one word". A cycle is "everyone has finished a whole sentence". Since a sentence is made of several words, a cycle is longer than a round.
+
 **Additional context (Dolev §2.3).** each cycle spans O(Δ) rounds. A processor may start in the middle of an iteration; if an iteration takes *x* steps, it completes a full iteration within fewer than 2*x* steps. For synchronous algorithms, time complexity is the number of pulses. Space complexity is the total number of local and shared memory bits used.
+
+**Remember:**
+
+- **Stabilization time** = number of **asynchronous rounds** until a safe configuration.
+- **Round**: shortest prefix where **every processor takes at least one step**; next round = first round of the rest.
+- Example: *pᵢ* moves at steps 1, 2, 3, *pⱼ* at step 4 → round 1 ends with *aʲ₄*.
+- **Cycle**: shortest prefix where every processor completes **one full iteration** of its do-forever loop; one iteration = **O(Δ)** steps; a cycle spans **O(Δ)** rounds.
+- Synchronous time = number of **pulses**; space = total memory **bits**.
 
 ## 4. Summary
 
+**What this chapter is about:** the whole lecture as one chain of definitions, each built on the one before.
+
 ### 4.1 Recap: the chain of definitions
+
+**In one sentence:** processor → state → configuration → step → execution → fairness → transient faults → LE and safe configurations → self-stabilizing → rounds and cycles.
 
 Each definition is built from the one before it, and together they are the language of every proof in the rest of the course:
 
@@ -542,6 +802,19 @@ Each definition is built from the one before it, and together they are the langu
 5. **Transient faults** can leave the system in any configuration.
 6. **LE** describes correct behaviour; a **safe configuration** guarantees only legal executions from then on; an algorithm is **self-stabilizing** if every fair execution reaches a safe configuration.
 7. **Stabilization time** is measured in **asynchronous rounds** (or **cycles**, each O(Δ) rounds).
+
+```mermaid
+flowchart TB
+  A["1. processor, state sᵢ"] --> B["2. configuration c"] --> C["3. step a, execution E"]
+  C --> D["4. fairness<br/>(execution, communication)"] --> E["5. transient faults:<br/>any configuration"]
+  E --> F["6. LE, safe configuration,<br/>self-stabilizing"] --> G["7. stabilization time:<br/>rounds, cycles"]
+```
+
+> **Kid example.** It is like learning a language: first letters (processors and states), then words (configurations), then sentences (steps and executions), then grammar rules (fairness), and finally you can tell a whole story (prove that an algorithm self-stabilizes, and how fast).
+
+**Remember:**
+
+- The seven links of the chain above; every later lecture uses them.
 
 ## Revision notes and references
 
