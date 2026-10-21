@@ -2,11 +2,11 @@
 
 **Revised:** 21 October 2026
 
-One study guide per lecture, numbered in the order of the course's pre-lecture quizzes. Each guide begins with an alphabetical glossary and a two-level table of contents, is organized into chapters with numbered subsections, and ends with revision notes and references. Diagrams are Mermaid and render directly on GitHub.
+One study guide per lecture, numbered in the order of the course's pre-lecture quizzes. Every guide is written in simple words for beginners, so you can understand it on the first reading and explain it to someone else. Each guide starts with a glossary and a **Before you start: the words you need** section, and each chapter starts with **What this chapter is about**. Every part then gives the idea **in one sentence**, the full explanation step by step, a **Kid example** with everyday things, pictures, and a **Remember** list for the exam. Diagrams are Mermaid and render directly on GitHub.
 
 **† Supplementary material:** Content originating exclusively from hidden PowerPoint slides. It may not be included in this year's examinable material.
 
-**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise. Paragraphs that begin with **Additional context** add material from outside the lecture.
+**How to read the guides.** **Technical clarification** marks a place where the slides are wrong or unclear, and gives the correct version. **Additional context** adds something useful that is not on the slides.
 
 **Exam:** 29 October 2026, 08:00–12:00. Question 1 is a set of multiple-choice questions on Internet technology (guides 01–06). The remaining questions concern self-stabilizing algorithms (guides 07–16).
 
