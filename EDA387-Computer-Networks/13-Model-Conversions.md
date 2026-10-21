@@ -6,13 +6,13 @@
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. In this lecture the hidden material is: the lower-bound proof (section 2.5, which the lecture also says was skipped this year), one ranking example, counting in a non-rooted tree (section 3.4) and all of §4.5, the synchronizers (sections 5.1 to 5.4). The lecture's roadmap also **strikes through** §4.5 "Stabilizing Synchronizers" and §4.6 "Self-Stabilizing Naming in Uniform Systems", so §4.6 is not covered at all and §4.5 appears only as hidden material.
 
-**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
+**How to read this guide.** Every part starts with **In one sentence**, the whole idea in one line. Then comes the explanation in small steps, a **Kid example** (the same idea told with everyday things), pictures, and a **Remember** list with what you must know for the exam. **Technical clarification** marks a place where the slides are wrong or unclear, and gives the correct version. **Additional context** adds something useful that is not on the slides.
 
 ---
 
 ## Glossary
 
-| Term | Expansion or category | Meaning |
+| Term | Full name | Meaning in simple words |
 |---|---|---|
 | Adaptive algorithm (time / memory / communication) | — | An algorithm whose stabilization time, memory, or number of bits sent grows with the **actual** size of the system (for example its real diameter d), not with an upper bound N. |
 | Alpha (α) synchronizer | — | † A synchronizer for message passing: each processor keeps a phase number and moves to the next phase only when no neighbour is behind. |
@@ -51,6 +51,7 @@
 
 ## Contents
 
+- [Before you start: the words you need](#before-you-start-the-words-you-need)
 - [1. Compilers between models: token passing (Dolev §4.1)](#1-compilers-between-models-token-passing-dolev-41)
   - [1.1 The idea: compilers between models](#11-the-idea-compilers-between-models)
   - [1.2 From a central daemon to read/write atomicity](#12-from-a-central-daemon-to-readwrite-atomicity)
@@ -86,9 +87,33 @@
   - [6.3 Related quiz topics not on the slides](#63-related-quiz-topics-not-on-the-slides)
 - [Revision notes and references](#revision-notes-and-references)
 
+## Before you start: the words you need
+
+- **Model:** the "rules of the world" an algorithm lives in, for example "only one processor moves at a time" or "processors talk by sending letters".
+- **Daemon (scheduler):** the one who decides who moves. A **central daemon** lets **one** processor move at a time; a **distributed daemon** lets **several** move at once.
+- **Read/write atomicity:** the realistic rule: one step is just **one** read **or** one write, and others can act in between.
+- **Register:** a little shared whiteboard. A neighbour can read it; the owner can overwrite it.
+- **Message passing:** processors send letters over links. A link can hold **many** old letters.
+- **Special processor:** one processor that runs a different program (for example the root or leader).
+- **ID-based system:** every processor has its own unique name (number).
+- **Compiler (conversion):** a recipe that rewrites an algorithm from an easy model into a harder, realistic model.
+
+**From easy to realistic (this lecture climbs down this list):**
+
+```mermaid
+flowchart LR
+  A["central daemon<br/>(easiest)"] --> B["read/write<br/>atomicity"] --> C["message passing<br/>(hardest, most real)"]
+```
+
+> **Kid example.** You learn to ride a bike with training wheels (an easy model). A compiler is like a coach who shows you how to take the training wheels off **without falling**: the same trip, but now on a real bike in real traffic.
+
 ## 1. Compilers between models: token passing (Dolev §4.1)
 
+**What this chapter is about:** the idea of a "compiler" between models, and the first one: making an algorithm that needs "one processor at a time" work when processors only read and write.
+
 ### 1.1 The idea: compilers between models
+
+**In one sentence:** a compiler rewrites an algorithm designed in an easy model so that it runs, and still self-stabilizes, in a harder and more realistic model.
 
 Chapter 4 is about **conversions**. An algorithm is often easiest to design in a comfortable, unrealistic model (for example "only one processor moves at a time"). A **compiler** then turns it into an algorithm for a harder, realistic model, and the result is still self-stabilizing.
 
@@ -113,7 +138,16 @@ flowchart LR
 
 **Technical clarification.** The direction words in the 4.3 and 4.4 titles can be confusing. "Converting an Id-based System to a Special-processor System" means: take an algorithm that **needs** IDs and make it **run on** a system that only has one special processor (by creating IDs). "Converting a Special Processor to an Id-based Dynamic System" means: take an algorithm that **needs** a special processor (a leader) and make it **run on** an ID-based system (by electing a leader).
 
+> **Kid example.** A recipe written for a fancy kitchen with a helper who hands you one ingredient at a time. A "compiler" rewrites it so it also works in a busy home kitchen where everyone grabs things at once.
+
+**Remember:**
+
+- **Compiler** = algorithm for model A ⇒ algorithm for model B, still self-stabilizing.
+- This lecture: **4.1** daemon → read/write, **4.2** shared memory → message passing, **4.3** IDs needed → one special processor (create IDs), **4.4** special processor needed → IDs (elect a leader). 4.5 is hidden †, 4.6 is not covered.
+
 ### 1.2 From a central daemon to read/write atomicity
+
+**In one sentence:** let only the holder of Dijkstra's token take a step, with the token going round an Euler tour of a spanning tree; then the system behaves like a central daemon.
 
 #### The motivation
 
@@ -159,9 +193,29 @@ flowchart LR
 
 From an arbitrary start the mutual-exclusion part may have several tokens, so several processors, even neighbours, may change state at once. During that time AL (the task algorithm) may misbehave. That does not matter: AL does not interfere with the mutual-exclusion algorithm, and once mutual exclusion is safe, exactly one processor moves at a time, which **is** a central daemon. AL's own variables are arbitrary at that moment, but AL was designed to converge from any configuration under a central daemon. Every time a processor holds the token it does only a constant number of steps, so the mutual exclusion algorithm still converges.
 
+**Why a central daemon is enough to aim for:** "one at a time" is just one of the choices a distributed daemon could make.
+
+```mermaid
+flowchart LR
+  A["works for EVERY<br/>distributed daemon choice"] --> B["so it works for the choice<br/>'one processor at a time'"] --> C["= central daemon"]
+```
+
+> **Kid example.** The class wants "one kid talks at a time". Pick a captain (leader election), seat everyone along a path that walks around the playground tree (Euler tour), and pass one talking stick. At first there may be two sticks and some chaos, but the stick rules fix themselves, and then the discussion fixes itself too.
+
+**Remember:**
+
+- Distributed daemon ⇒ central daemon, so build the compiler **for the central daemon**.
+- Compiler: **spanning tree** → **Euler tour** (virtual ring) → **Dijkstra's mutual exclusion**; the token holder reads, does one step, writes, passes the token.
+- **AL (read/write) = AL (daemon) ∘ Mutual Exclusion** (fair composition).
+- Before ME is safe, several may move at once; that is fine, because AL converges from any state once ME acts as a central daemon.
+
 ## 2. Message passing and data-link algorithms (Dolev §4.2)
 
+**What this chapter is about:** why links full of old messages make life hard, how a counter that keeps growing cleans a link, why a bounded counter cannot work in general, and how to fake shared registers with messages.
+
 ### 2.1 Why message passing is harder
+
+**In one sentence:** a register holds one value, but a link can hold any number of old messages, so there are infinitely many possible starting messes.
 
 **"Designing a self-stabilization algorithm for asynchronous message-passing systems is more subtle than the same task in asynchronous shared memory systems."** The **main challenge is the messages stored in the communication links**:
 
@@ -172,7 +226,24 @@ So **"There are infinitely many initial configurations from which the system mus
 
 The goal is a second compiler, **AL for T (read/write) → AL for T (message passing)**, and **"First goal in designing of such a compiler is a self-stabilizing data-link algorithm"**: something that cleans the unknown garbage out of a link.
 
+**A register versus a link:**
+
+```mermaid
+flowchart LR
+  R["REGISTER<br/>holds exactly 1 value"] ~~~ L["LINK<br/>holds 0, 1, 2, ... old messages<br/>(no bound, no delivery-time bound)"]
+```
+
+> **Kid example.** A whiteboard (a register) holds one message; you just overwrite it. A mail chute (a link) can be stuffed with any number of old letters, and you never know how many.
+
+**Remember:**
+
+- Main challenge: messages **stored in links**: no bound on **delivery time**, no bound on **number** of messages.
+- ⇒ **infinitely many initial configurations**.
+- First goal of the compiler: a **self-stabilizing data-link algorithm**.
+
 ### 2.2 The self-stabilizing data-link task as token passing
+
+**In one sentence:** a data link must deliver every message once, in order, and this is the same job as passing one token back and forth between sender and receiver.
 
 First, the job.
 
@@ -184,7 +255,23 @@ First, the job.
 
 **Additional context.** Dolev explains why data link and token passing are "the same" job. In stop-and-wait, each message is acknowledged before the next is sent, which looks like one token going back and forth: when the sender fetches a new message it "holds the token", and when the receiver delivers a message it "holds the token". In the other direction, attach the current message to every frame that carries the token; the receiver delivers the attached message when the token arrives. Either way, the sender and the receiver never hold the token at the same time.
 
+```mermaid
+flowchart LR
+  S["SENDER<br/>holds the token:<br/>fetches a new message"] -- "token (with message)" --> R["RECEIVER<br/>holds the token:<br/>delivers the message"]
+  R -- "token back (ack)" --> S
+```
+
+> **Kid example.** Two friends play catch with one ball. Only the one holding the ball may talk. The ball goes back and forth forever, and never both of them hold it at the same time. A data link is the same: one "ball" (token) goes back and forth, and each throw carries one message.
+
+**Remember:**
+
+- Data link: deliver **without duplications, omissions or reordering**.
+- **TP task**: at most **one** of sender and receiver holds the token; **both** hold it infinitely often.
+- Stop-and-wait looks exactly like one token going back and forth.
+
 ### 2.3 The unbounded-counter solution
+
+**In one sentence:** the sender always sends a number bigger than any number it has seen; when that brand-new number comes back, the link is clean.
 
 #### The code
 
@@ -242,13 +329,42 @@ sequenceDiagram
     Note over S,R: from the first return of 8 on, all counters agree: safe
 ```
 
+**The sender's rule, as a picture:**
+
+```mermaid
+flowchart LR
+  M["message arrives<br/>with value v"] --> Q["is v ≥ my counter?"]
+  Q -- "yes: token arrives" --> T["counter := v + 1<br/>send it"]
+  Q -- "no: old garbage" --> G["send my counter again"]
+```
+
+> **Kid example.** Everybody in the room shouts numbers. You pick a number bigger than anything anyone has ever said. When that number comes back to you, you know it is your answer and not some old echo.
+
+**Remember:**
+
+- Messages carry **MsgCounter**; sender and receiver keep an **unbounded counter**; a **timeout** prevents deadlock.
+- Sender: if MsgCounter **≥** counter ⇒ counter := MsgCounter + 1, send. Receiver: if MsgCounter **≠** counter ⇒ copy it; always echo.
+- **Lemma 4.1**: safe = **all counters and all message labels equal**.
+- **Theorem 4.1**: always reaches safe; the key is the sender introducing **max + 1**, a value that exists nowhere.
+
 ### 2.4 Can the counter be bounded? No
+
+**In one sentence:** with full asynchrony and links that can hold any number of messages, no algorithm with a bounded counter can work.
 
 The lecture asks: **"Whether bounded counters can replace the algorithm's unbounded counter and label?"** **Answer: NO**, **"assuming asynchrony and unbounded channels"**.
 
 **Additional context.** Dolev's practical remark: "It is customarily assumed that a sixty-four-bit counter can implement an unbounded counter for every possible application ... However, in the context of self-stabilizing algorithms, a single transient fault may cause the counter to reach its upper limit instantly." So "64 bits is enough" is not a valid argument in a self-stabilization exam answer.
 
+> **Kid example.** A car's distance counter has 6 digits, which looks like plenty. But if a fault sets it to 999 999 in one go, it has nowhere left to count. In self-stabilization you must assume a fault can do exactly that.
+
+**Remember:**
+
+- Bounded counters **cannot** replace the unbounded one **under asynchrony and unbounded channels**.
+- "64 bits is enough" is **not** a valid argument: one transient fault can push the counter to its limit instantly.
+
 ### 2.5 † The lower bound, proof sketch
+
+**In one sentence:** † a correct algorithm can never repeat a configuration, so its memory must keep growing (at least log₂(t) bits after t configurations).
 
 *The lecture says this proof was skipped this year.*
 
@@ -274,7 +390,29 @@ So a self-stabilizing algorithm for TP cannot let configurations repeat, and its
 
 **Additional context.** Dolev's conclusion: "no token-passing or stop-and-wait data-link algorithm exists with bounded memory resources. The memory of at least one of the system components must grow, either the memory of a processor or the number of bits in a message queue."
 
+**Why "all different" means "memory grows":** with *b* bits there are only 2^*b* different pictures.
+
+| Bits *b* | Different configurations possible (2^*b*) |
+|---|---|
+| 1 | 2 |
+| 3 | 8 |
+| 10 | 1024 |
+| 20 | 1 048 576 |
+
+So to have *t* different configurations, some must use at least log₂(*t*) bits.
+
+> **Kid example.** With 3 light bulbs you can make only 8 different on/off patterns. If a game says "never show the same pattern twice", then after 8 patterns you need a fourth bulb, then a fifth, and so on. The memory has to keep growing.
+
+**Remember:**
+
+- † **WE task**: a pair of steps (one per side) never executed concurrently; TP is one.
+- † **Theorem 4.2**: in every execution of a self-stabilizing WE protocol, **all configurations are distinct** ⇒ some configuration among the first *t* has **≥ log₂(t)** bits.
+- † Proof: a repeating configuration gives a **circular** execution; pad the links and merge steps so that any pair is applicable together ⇒ never safe.
+- No bounded-memory token-passing / stop-and-wait data link exists.
+
 ### 2.6 Two practical bounded solutions
+
+**In one sentence:** if you know how many messages a link can hold, count modulo cap + 1; otherwise pick random labels from at least three values.
 
 The lower bound assumes a completely asynchronous system with unbounded links. Relax one assumption and bounded solutions exist.
 
@@ -301,7 +439,24 @@ The lower bound assumes a completely asynchronous system with unbounded links. R
 | Counter mod (cap + 1) | at most cap messages in transit | bounded | always |
 | Random labels, ≥ 3 values | a random-number device | bounded | with probability 1 |
 
+**Why at least three labels:**
+
+```mermaid
+flowchart LR
+  T["2 labels: after 0 always 1<br/>(no real choice, old garbage can fool it)"] ~~~ H["3 or more labels: after 0 pick 1 or 2 at random<br/>(garbage cannot always guess)"]
+```
+
+> **Kid example.** You draw a numbered ball from a hat and shout it until the same number echoes back. If the hat has only 2 balls, a prankster who knows the old echoes can always guess your next number. With 3 or more balls, the prankster must guess, and sooner or later guesses wrong.
+
+**Remember:**
+
+- **Bounded link** (at most **cap** messages in transit): counter **mod (cap + 1)**; a missing label always exists.
+- **Randomized**: random labels from **at least 3** values; on line 06 the test becomes **MsgLabel = label**; stabilizes **with probability 1** (no fixed time bound).
+- Two labels = alternating bit, which is **not** enough (exam, Oct 2022).
+
 ### 2.7 Simulating shared memory over message passing
+
+**In one sentence:** a register's value rides on the token; to read, wait for the token twice and use the value from the second arrival.
 
 Now the data-link (token-passing) algorithm is used to **simulate shared registers** with messages.
 
@@ -335,9 +490,22 @@ sequenceDiagram
 
 Why wait for the **second** token? The first one may carry a value that Pj attached long before the read started. The second token was filled in by Pj **after** the read began, so its value is a value that R_ji really had during the read. (Dolev uses this to show that, once each link has a single token, all simulated reads and writes are **linearizable**.)
 
+> **Kid example.** You ask your neighbour "what is on your board?" The first note they pass you might have been written before you asked. So you pass the note back and wait for the next one: that one was surely written after your question.
+
+**Remember:**
+
+- A **token-passing** algorithm on every link; the larger ID is the **sender**.
+- Each time Pi gets the token from Pj, it attaches the current **R_ij**.
+- **Write**: update the local copy. **Read**: wait for the token **twice**, use the **second** value.
+- After stabilization the simulated reads and writes are **linearizable**.
+
 ## 3. Ranking (Dolev §4.3)
 
+**What this chapter is about:** how one special processor can give every processor a unique name 1 to n, by building a tree, counting subtrees and handing out blocks of numbers.
+
 ### 3.1 Ranking: from IDs to one special processor
+
+**In one sentence:** ranking gives the n processors the names 1 to n, using only one special processor: build a tree, count each subtree, then hand out blocks of numbers.
 
 The goal is a compiler that converts a self-stabilizing algorithm for a **unique-ID system** to work in a **special-processor system** (one special processor, everyone else identical). The way: create the IDs. **The ranking task is to assign each of the n processors a unique identifier in the range 1 to n.**
 
@@ -351,7 +519,17 @@ flowchart LR
     NA --> ID["unique IDs<br/>1 ... n"]
 ```
 
+> **Kid example.** A class of identical children with no names and one teacher (the special processor). The teacher lines them up in a family tree, each group counts how many it has, and then the teacher hands out seat numbers so that each group gets a row of seats exactly as long as the group.
+
+**Remember:**
+
+- **Ranking task**: give the *n* processors unique IDs **1 to *n***.
+- Needs only **one special processor**; turns it into an **ID-based** system.
+- Ranking = **spanning tree** + **counting** + **naming** (fair composition).
+
 ### 3.2 The counting algorithm
+
+**In one sentence:** every node's count is the sum of its children's counts plus 1 (itself), so correct numbers flow up from the leaves to the root.
 
 **Assumption:** a rooted spanning tree in which **every processor knows its parent and children**. Each pi has a variable **count_i** that holds the number of processors in the subtree rooted at pi (including pi itself). The proof is by induction on the height of a processor.
 
@@ -381,7 +559,26 @@ This is the **convergecast** pattern: correct values flow from the leaves up to 
 
 **Technical clarification.** The lecture defines tree height as "the length of the longest path from the root to any leaf" (so a one-node tree has height 0) but then calls the base case "h = 1". The idea is unchanged: the base case is a single leaf, and each level up costs one more cycle. The same definition also has the typo "tee" for "tree".
 
+**A tiny example** (numbers flow upward):
+
+```mermaid
+flowchart BT
+  c["c: leaf<br/>count 1"] --> a["a: 1 + 1<br/>count 2"]
+  a --> r["root: 2 + 1 + 1<br/>count 4"]
+  b["b: leaf<br/>count 1"] --> r
+```
+
+> **Kid example.** In a family tree, everyone tells their parent "my branch has k people, me included". Babies say 1. Parents add up their kids' numbers plus 1. Grandma ends up knowing the size of the whole family.
+
+**Remember:**
+
+- Needs a **rooted spanning tree** (everyone knows parent and children).
+- **count = Σ children's counts + 1**; a leaf always has 1.
+- **Convergecast**; induction on **height**; stabilizes in **O(h)** cycles, h ≤ d.
+
 ### 3.3 The naming algorithm
+
+**In one sentence:** the root is 1, and each child gets a block of consecutive numbers exactly as big as its subtree.
 
 The naming algorithm uses the **count** fields to give unique identifiers, stored in **ID_i**. The proof is by induction on the **distance from the root**.
 
@@ -431,7 +628,17 @@ Check: the root gives its children 1 + 1 + 0 = **2**, 1 + 1 + 2 = **4** and 1 + 
 - **Dis = 0:** line 2 gives the root ID 1, and {2, …, n} remain.
 - **Dis + 1:** a node is named "x + 1 + the sizes of the earlier children of the parent", where x is the parent's ID. Each child gets as many IDs as its subtree has nodes. This relies on the induction hypothesis, on the correctness of the counting algorithm, and on **the theorem of fair composition** (naming runs on top of counting).
 
+> **Kid example.** Grandma is number 1. Her first child's branch has 2 people, so it gets the numbers 2 and 3. The next branch starts at 4, and so on. Like reserving a row of seats for each family, as long as the family.
+
+**Remember:**
+
+- Root ID = **1**. A node with ID *x* gives its children **x + 1**, **x + 1 + count(child 1)**, **x + 1 + count(child 1) + count(child 2)**, …
+- Each subtree gets a **block of consecutive IDs as big as the subtree** (pre-order).
+- Induction on **distance from the root**; relies on counting being correct and on **fair composition**.
+
 ### 3.4 † Counting in a non-rooted tree
+
+**In one sentence:** † without a root, each node tells each neighbour "how many nodes are on my side if you cut our link".
 
 Without a root, nobody knows which neighbour is the "parent". So each processor keeps **one count per neighbour**: **count_i[j] is the number of processors in the part of the tree that contains pi when the edge between pi and pj is cut**.
 
@@ -471,9 +678,21 @@ Check one edge: cut B–D, and B's side is {A, B, C} = 3 while D's side is {D, E
 
 **Additional context.** Dolev: the height of a register is at most the diameter d, so a safe configuration is reached within **O(d)** cycles, and the counting algorithm "can be used to elect a leader (or two leaders if symmetry cannot be broken)". For example the middle node of a tree, where no side has more than half the nodes; on a path with an even number of nodes, the two middle nodes look exactly alike. This pattern (with "height" instead of "count") is how the exams of Oct 2019, Oct 2024 and Oct 2025 find the **centers** of an anonymous tree.
 
+> **Kid example.** Children hold hands in a tree shape. Cut the hands between you and one friend: how many children stay on your side? You only need to ask your other friends "how many are on your side?", add them up and add 1 for yourself. A child at the end of a line always says 1.
+
+**Remember:**
+
+- † **count_i[j]** = size of pi's side when the edge pi–pj is cut = 1 + what all **other** neighbours told pi.
+- † The two numbers on an edge add up to **n**. Stabilizes in **O(d)** cycles.
+- † Used to find the **center(s)** of an anonymous tree (exams 2019, 2024, 2025). Lines 11 and 14 do not give the total size.
+
 ## 4. Update (Dolev §4.4)
 
+**What this chapter is about:** how processors with IDs can all learn every ID and distance, and so elect a leader fast (O(d)), plus why identical processors cannot do this.
+
 ### 4.1 Update: from a special processor to IDs
+
+**In one sentence:** with IDs, every processor learns the ID and distance of every other processor in O(d) cycles, so the biggest ID can become the leader.
 
 - **The task of the update algorithm** in an ID-based system: **inform each processor of the other processors in its connected component.**
 - Then **every processor knows the maximal ID**, so **a single leader is elected**.
@@ -482,7 +701,17 @@ Check one edge: cut B–D, and B's side is {A, B, C} = 3 while D's side is {D, E
 
 **Additional context.** Dolev §4.4 explains why O(d) matters. The leader election of §2.9 needs O(N) cycles, where N is an upper bound on the size of the **whole** system. After failures split the network into small pieces, each piece should recover in time proportional to its own diameter d, not to N; otherwise the network may change again before it finishes.
 
+> **Kid example.** Every child keeps a contact list "name, how many seats away". Once everyone's list is complete, everybody knows the biggest name in the room, and that child becomes the leader. How long it takes depends on how far apart the farthest two children sit (d), not on how big the school could be.
+
+**Remember:**
+
+- **Update task**: every processor learns **all processors in its connected component**.
+- ⇒ everyone knows the **maximal ID** ⇒ **leader election in O(d)** cycles.
+- O(d), not O(N): after a split, each small piece recovers in time of **its own** diameter.
+
 ### 4.2 Why special processors matter: Dijkstra's symmetry proof
+
+**In one sentence:** identical processors in a ring can be scheduled so that they stay mirror images forever, so mutual exclusion is impossible without a special processor or IDs.
 
 **"Dijkstra proved that without a special processor, it is impossible to achieve ME in a self-stabilizing manner."** The proof is for a **composite (non-prime) number of identical processors in a ring, activated by a central daemon**. ME requires that pi may execute the critical section **if and only if it is the only processor that can change its state** at that point.
 
@@ -508,7 +737,18 @@ flowchart LR
 - **With no central daemon, the impossibility holds also for a ring with a prime number of identical processors**: start with all processors in the same state and all registers identical, and let every processor read all its neighbours' registers before anyone writes. Symmetry is then kept forever.
 - Therefore the motivation for designing the update algorithm in an **ID-based (non-anonymous)** system is clear.
 
+> **Kid example.** Two pairs of identical twins sit in a circle and follow the same rule. If you always let twin 1, then twin 1's twin, then the other pair act, they stay mirror images forever, so whenever one twin gets the "speak" ticket, the other twin gets one too.
+
+**Remember:**
+
+- **Dijkstra**: no self-stabilizing ME without a special processor, for a **composite** number of identical processors (central daemon).
+- 4-ring: p1 and p3 always in the same state, p2 and p4 too ⇒ two can enter the critical section together.
+- With **no central daemon**, even a **prime** ring fails (all read, then all write).
+- ⇒ design the update algorithm for **ID-based** systems.
+
 ### 4.3 The update algorithm
+
+**In one sentence:** each round, copy your neighbours' lists of ⟨ID, distance⟩, add 1 to every distance, keep the shortest one for each ID, and add yourself at distance 0.
 
 **Outline.**
 
@@ -561,7 +801,28 @@ flowchart LR
 
 (We re-computed these tables round by round; they match the lecture's third-round tables.)
 
+**Processor 1's table, round by round** (from the run example):
+
+| After round | Processor 1 knows |
+|---|---|
+| 0 | ⟨1,0⟩ |
+| 1 | ⟨1,0⟩ ⟨2,1⟩ |
+| 2 | ⟨1,0⟩ ⟨2,1⟩ ⟨3,2⟩ ⟨5,2⟩ |
+| 3 | ⟨1,0⟩ ⟨2,1⟩ ⟨3,2⟩ ⟨5,2⟩ ⟨4,3⟩ ⟨6,3⟩ |
+
+Each round adds the processors one hop further away.
+
+> **Kid example.** Every child keeps a list "child's name, how many seats away". Each round you copy your neighbours' lists, add 1 to every number, keep the smallest number for each name, and write yourself in with 0.
+
+**Remember:**
+
+- Builds **n BFS trees**, one rooted at each processor; ties go to the parent with the **maximal ID**.
+- Each iteration: read neighbours' sets (**not** your own), drop tuples about yourself, **+1** to all distances, add **⟨i, 0⟩**, keep the **minimum** per ID, write **ConPrefix**.
+
 ### 4.4 Floating tuples and ConPrefix
+
+**In one sentence:** a fake ID gets one step further away every time it is copied, so soon there is a gap in the distances, and ConPrefix cuts off everything after the gap.
+
 - **A floating tuple in readSet is a tuple with an identifier of a processor that does not exist.**
 - **Let y be the minimal missing distance value in readSet_i.**
 - **We remove every tuple with distance greater than y in readSet_i.** **ConPrefix(readSet_i)** removes these tuples.
@@ -582,7 +843,22 @@ flowchart LR
 
 In the first column the distances 0, 1, 2, 3, 4 have no gap, so nothing is removed yet. One copy later the fake distances have grown to 4 and 5, distance 3 is missing, and ConPrefix **removes all tuples from this point** on.
 
+```mermaid
+flowchart LR
+  d0["distance 0 ✓"] --> d1["distance 1 ✓"] --> d2["distance 2 ✓"] --> d3["distance 3<br/>MISSING (gap)"] --> d4["distance 4, 5, ...<br/>CUT by ConPrefix"]
+```
+
+> **Kid example.** Stepping stones across a river are numbered 0, 1, 2, 3, … If stone 3 is missing, nobody can really be standing on stone 4 or 5: anyone who says so is making it up. ConPrefix throws away every claim beyond the first missing stone.
+
+**Remember:**
+
+- **Floating tuple** = a tuple about a processor that **does not exist**.
+- *y* = the **smallest missing distance**; **ConPrefix** removes every tuple with distance greater than *y*.
+- Real distances have **no gaps**; a fake tuple's distance grows by 1 per copy until a gap opens below it.
+
 ### 4.5 Correctness of the update algorithm
+
+**In one sentence:** after k cycles everything up to distance k is correct, fake tuples are gone after d + 2 cycles, and the system is safe after d + 3 cycles.
 
 **Safe configuration.** For every pi:
 
@@ -605,7 +881,22 @@ Proof by induction on k:
 
 **Technical clarification.** The lecture says "every tuple with a distance **smaller than** d is not a floating tuple". Dolev says "distance **d or less**", and the argument needs that (it concludes that a floating tuple has y > d). The lecture's "y ℓ" and "ℓ d" are "y ≤ ℓ" and "ℓ ≤ d" with the symbol lost.
 
+```mermaid
+flowchart LR
+  A["after k cycles:<br/>correct up to distance k<br/>(Lemma 4.6)"] --> B["after d + 2 cycles:<br/>no floating tuples<br/>(Lemma 4.7)"] --> C["after d + 3 cycles:<br/>SAFE<br/>(Corollary 4.1)"]
+```
+
+> **Kid example.** On day 1 every child surely knows themself. On day 2 every child surely knows the friends right next to them. Each day the "surely correct" circle grows by one seat. Once it covers the whole room, a made-up name has nowhere to hide.
+
+**Remember:**
+
+- **Safe**: Processors_i has exactly **n** tuples ⟨j, distance⟩, and rereading writes the same contents.
+- **Lemma 4.6** (induction on *k*): inclusion and constant value up to distance ℓ < min(*k*, *d* + 1).
+- **Lemma 4.7**: after **d + 2** cycles no floating tuples. **Corollary 4.1**: safe after **d + 3** cycles.
+
 ### 4.6 Topology update: convergecast and broadcast
+
+**In one sentence:** collect everybody's local map up the leader's tree (convergecast), then send the full map back down (broadcast), each in O(d).
 
 Once the update algorithm runs, every processor knows the leader (maximal ID) and, in the leader's BFS tree, its parent and children (in O(d) cycles). Now the whole map can be collected and shared.
 
@@ -634,7 +925,24 @@ The leader ends with Up0 = {2.0, 2.3, 2.7, 5.3, 5.4, 5.2, 1.0, 7.1, 4.3}: every 
 
 **Additional context.** Dolev's timing: after one cycle every leaf's up value is fixed; after h cycles every processor of height h − 1 or less has the correct topology of its subtree. For broadcast, after the i-th cycle every processor within distance i of the root has the right information. Old exams used exactly "update + convergecast + broadcast" for link-state routing (Oct 2023) and for collecting inputs (Jan 2025): total O(d) + O(d) + O(d) = O(d).
 
+```mermaid
+flowchart LR
+  L["leaves: my links"] -- "CONVERGECAST (up):<br/>add your own links" --> R["leader: the whole map"]
+  R -- "BROADCAST (down):<br/>Down_i = Down_parent" --> E["everyone: the whole map"]
+```
+
+> **Kid example.** Each child writes on a card who sits next to them and passes it up to their group leader, who staples the cards together and passes them up again, until the teacher has the full seating plan. Then the teacher makes copies and passes them back down, so everybody has the full plan.
+
+**Remember:**
+
+- **Convergecast**: up_i = own local topology + children's up values (leaves first).
+- **Broadcast**: Down_root = Up_root; Down_i = Down_parent.
+- Each takes **O(d)**; update + convergecast + broadcast = **O(d)** (exams 2023, 2025).
+
 ### 4.7 Adaptive self-stabilizing algorithms
+
+**In one sentence:** an adaptive algorithm's time, memory or traffic grows with the real size of the network, not with a worst-case bound N.
+
 - **Time-adaptive:** the number of cycles until convergence is proportional to the system's (actual) parameters.
 - **Memory-adaptive:** the memory used in a safe configuration is proportional to the system's parameters.
 - **Communication-adaptive** (for a **silent** algorithm): the number of bits communicated is proportional to the system's parameters.
@@ -643,9 +951,20 @@ The leader ends with Up0 = {2.0, 2.3, 2.7, 5.3, 5.4, 5.2, 1.0, 7.1, 4.3}: every 
 
 **Additional context.** Dolev contrasts this with the leader election of §2.9, which takes O(N) cycles, where N is an upper bound: that algorithm is **not** time-adaptive.
 
+> **Kid example.** A fire drill in a small house should take a short time, even though skyscrapers exist. An adaptive algorithm is like a drill that takes as long as **your** building needs, not as long as the biggest possible building would need.
+
+**Remember:**
+
+- **Time-adaptive**: cycles ∝ actual parameters. **Memory-adaptive**: memory ∝ actual parameters. **Communication-adaptive** (silent algorithms): bits ∝ actual parameters.
+- Update: **O(d)** cycles, **O(n)** tuples ⇒ all three. Leader election of §2.9 (O(N)) is **not** time-adaptive.
+
 ## 5. † Synchronizers (Dolev §4.5)
 
+**What this chapter is about:** † (hidden material) how to make an asynchronous system behave as if everyone moved in lock-step pulses.
+
 ### 5.1 † Synchronizers: what and why
+
+**In one sentence:** † a synchronizer lets an algorithm written for lock-step rounds run on an asynchronous system, at the price of waiting for the slowest processor.
 
 *Everything from here to section 5.4 is hidden material, and §4.5 is struck out on the lecture's roadmap.*
 
@@ -654,7 +973,17 @@ The leader ends with Up0 = {2.0, 2.3, 2.7, 5.3, 5.4, 5.2, 1.0, 7.1, 4.3}: every 
 - **Why not always:** it slows the fastest processors down to the speed of the slowest. Without it, fast processors could make progress and help the slow ones. Efficiency.
 - **Which ones:** the unbounded α synchronizer, the bounded α synchronizer, and the β synchronizer.
 
+> **Kid example.** In a rowing boat, a drummer beats a rhythm so that all rowers pull at the same time. The boat is only as fast as the slowest rower, but nobody gets out of step.
+
+**Remember:**
+
+- † Synchronizer: run a **synchronous** algorithm on an **asynchronous** system.
+- † Why: synchronous algorithms are easier (one configuration fixes the whole execution). Cost: fast processors wait for slow ones.
+- † Three: unbounded α, bounded α, β.
+
 ### 5.2 † The unbounded α synchronizer
+
+**In one sentence:** † each processor has a phase number and goes to the next phase only when no neighbour is behind it.
 
 **Setup.** The α synchronizer uses a **self-stabilizing data-link algorithm**: every message is received and acknowledged; P waits for the ack of m before sending a new m′ to Q; the ack can carry Q's current state.
 
@@ -687,7 +1016,17 @@ In words: tell every neighbour your phase and learn theirs; move to the next pha
 
 **Using it.** In a synchronous system, the state at time t + 1 depends on the neighbours' states at time t. With the α synchronizer, a processor with phase t computes the emulated state for pulse t. It attaches its **previous and current** state to every message, so a neighbour with phase t can always find the state for pulse t, even if the sender is already one phase ahead.
 
+> **Kid example.** Hikers on a trail tied together by short ropes: you may take the next step only if none of your neighbours is behind you. Nobody gets more than one step ahead of a neighbour, and the group keeps moving.
+
+**Remember:**
+
+- † Task: neighbours' phases differ by **at most 1**; every phase grows **infinitely often**.
+- † Rule: increase your phase only if **no neighbour is behind** (phase_i ≤ every phase_ji).
+- † Send **previous and current** state so a neighbour one phase behind can still use it.
+
 ### 5.3 † The bounded α synchronizer
+
+**In one sentence:** † phases are counted modulo M, and if two neighbours are too far apart, a reset wave sets every phase back to 0.
 
 **Idea.**
 
@@ -719,7 +1058,16 @@ flowchart LR
 
 **Technical clarification.** The lecture says M ≥ n; Dolev says M is "any constant greater than n" (and adds that "greater than" between phases is well defined for M ≥ 3). The code has the typo "RsetUpdate" for ResetUpdate.
 
+> **Kid example.** Clocks on a wall count 0 to M − 1 and start again. If one clock is suddenly far from its neighbours, someone shouts "reset!", the shout spreads from clock to clock, every clock goes to 0, and only then do they all start ticking again together.
+
+**Remember:**
+
+- † Phases **mod M** (lecture M ≥ *n*; Dolev: M > *n*); each pi also has **reset_i**.
+- † Neighbours too far apart ⇒ **reset wave** ⇒ all phases 0 ⇒ resets climb to **2N** ⇒ normal counting.
+
 ### 5.4 † The β synchronizer
+
+**In one sentence:** † the root paints the tree with a colour (the pulse); when the whole tree reports that colour back (safe), the root picks the next colour.
 
 **Idea.** Use a **rooted spanning tree** (from leader election plus spanning tree construction) and shared memory. One pulse has three stages:
 
@@ -773,9 +1121,21 @@ sequenceDiagram
 
 **Additional context.** Why 5n − 3 colours? The missing-label idea again (Dolev Lemma 4.14): there are n colour variables, 2n − 2 colour fields in the registers and 2n − 2 local copies, at most 5n − 4 colours in total, so with 5n − 3 values at least one colour is missing. The root, stepping through all colours, eventually picks a colour that exists nowhere, and when that colour comes back from the whole tree, all old garbage is gone.
 
+> **Kid example.** The teacher holds up a red card. Each row leader copies it and shows it to the row. When every child in a row shows red, the row leader tells the teacher. When all rows have reported red, the teacher switches to blue. Each colour change is one "beat" for the whole class.
+
+**Remember:**
+
+- † Rooted spanning tree; the root's **colour** goes down (**pulse**), "my subtree has your colour" comes up (**safe**).
+- † **5n − 3** colours ⇒ a missing colour always exists (Lemma 4.14).
+- † Root changes colour at least once per **2d + 1** cycles; safe within **O(dn)** cycles.
+
 ## 6. Summary and review
 
+**What this chapter is about:** the whole lecture on one page, old exam questions and extra quiz points.
+
 ### 6.1 Recap
+
+**In one sentence:** design in an easy model, then use a compiler: token passing for daemons, data links for messages, ranking to make IDs, update to elect a leader.
 
 - **Compilers** let you design in an easy model and run in a hard one, keeping self-stabilization.
 - **4.1:** central daemon → read/write = spanning tree + Euler-tour ring + Dijkstra's mutual exclusion, glued by fair composition. Only the token holder takes a step.
@@ -789,7 +1149,19 @@ sequenceDiagram
 - **Dijkstra's symmetry proof:** without a special processor (or IDs), identical processors can stay identical forever.
 - † **Synchronizers:** α (phases, neighbours differ by at most one; bounded version with a reset wave) and β (colouring a rooted tree, O(dn)).
 
+```mermaid
+flowchart LR
+  A["central daemon algorithm"] -- "4.1 token passing" --> B["read/write algorithm"]
+  B -- "4.2 data link" --> C["message-passing algorithm"]
+  D["one special processor"] -- "4.3 ranking" --> E["IDs 1 ... n"]
+  E -- "4.4 update" --> F["leader + full map in O(d)"]
+```
+
+> **Kid example.** The whole story: you design with training wheels (one at a time, shared whiteboards, a teacher), then use the right "coach" to take each training wheel off: a talking stick for "one at a time", a ball game for letters in chutes, seat numbers when there are no names, and contact lists to pick a leader.
+
 ### 6.2 Old exam questions on this lecture
+
+**In one sentence:** the exams reuse these building blocks: token passing for daemon algorithms, ranking for naming, update plus convergecast and broadcast for global knowledge.
 
 The exam cheat sheet contains several algorithms from this lecture: **Algorithm 8** (unbounded counter), **Algorithm 9** (random labels), **Algorithm 10** (counting), **Algorithm 11** (naming), **Algorithm 12** (update) and **Algorithm 20** (counting in a non-rooted tree, a home-assignment version of section 3.4 †). You may cite them ("we use Algorithm 10") instead of copying code.
 
@@ -812,7 +1184,14 @@ Update algorithm (leader and BFS tree) + **convergecast** of the inputs to the l
 
 **Exam tip.** "One special node, no IDs" → think **ranking** (tree, count, name). "IDs, need a fast leader or the whole map" → think **update**. "Central daemon algorithm, real system" → think **4.1 token passing**.
 
+**Remember:**
+
+- Cite the cheat sheet: **Algorithm 8** (unbounded counter), **9** (random labels), **10** (counting), **11** (naming), **12** (update), **20** (non-rooted counting †).
+- "One special node, no IDs" ⇒ **ranking**. "IDs, fast leader or full map" ⇒ **update** (+ convergecast + broadcast). "Central daemon algorithm in a real system" ⇒ **4.1 token passing**.
+
 ### 6.3 Related quiz topics not on the slides
+
+**In one sentence:** extra points from the pre-lecture quiz on daemons, the compiler, ranking, symmetry and token circulation.
 
 The course's pre-lecture quiz on this chapter (quiz 13, 53 questions on §4.1, 4.3 and 4.4) also asks about the following. Answers follow the quiz key and Dolev.
 
