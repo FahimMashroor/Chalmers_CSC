@@ -6,7 +6,7 @@
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material.
 
-**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
+**How to read this guide.** Every part starts with **In one sentence**, the whole idea in one line. Then comes the explanation in small steps, a **Kid example** (the same idea told with everyday things), pictures, and a **Remember** list with what you must know for the exam. **Technical clarification** marks a place where the slides are wrong or unclear, and gives the correct version. **Additional context** adds something useful that is not on the slides.
 
 **Numbering warning.** The "Theorem 2.1", "Claim 2.2", "Claim 2.3" and "Lemma 2.4" in this guide are the numbers used **inside this homework solution**. They are **not** the theorems with the same numbers in Dolev's book (where Theorem 2.1 is about Dijkstra's algorithm). Likewise, "Question 1/2/3" are the 2025 home-assignment numbers; in the 2026 assignment the same problems are Home Assignment 2, Questions 1 and 2.
 
@@ -14,7 +14,7 @@
 
 ## Glossary
 
-| Term | Expansion or category | Meaning |
+| Term | Full name | Meaning in simple words |
 |---|---|---|
 | altOneZero(*k*) | alternating one-zero | The sequence (1, 0, 1, 0, …) of length *k*, starting with 1. |
 | Asynchronous cycle | — | A stretch of an execution in which every processor runs its code at least once. |
@@ -35,6 +35,7 @@
 
 ## Contents
 
+- [Before you start: the words you need](#before-you-start-the-words-you-need)
 - [1. The setting](#1-the-setting)
   - [1.1 What the session covers](#11-what-the-session-covers)
   - [1.2 The setting: Dijkstra's directed ring](#12-the-setting-dijkstras-directed-ring)
@@ -47,9 +48,32 @@
   - [4.1 Recap](#41-recap)
 - [Revision notes and references](#revision-notes-and-references)
 
+## Before you start: the words you need
+
+- **Ring:** processors standing in a circle. In a **directed** ring each one can only look at the one just **before** it.
+- **Root *p*₀:** the one special processor that runs a different program. All the others run the same program and have no names.
+- **Colour:** a small number (0, 1 or 2) that each processor stores. **Vertex colouring** means neighbours must never have the same colour.
+- **Matching:** pairing up neighbours, like dancing partners, where nobody may be in two pairs at once.
+- **Self-stabilizing:** starting from any messed-up values, the processors fix them by themselves and then stay correct.
+- **Asynchronous cycle:** a stretch of time in which every processor has had at least one turn.
+- **Convergence stairs:** a way to prove recovery step by step: first one thing becomes true and stays true, then the next, until everything is correct.
+
+**The ring in one picture** (each processor reads the colour of the one before it):
+
+```mermaid
+flowchart LR
+    p0["p₀ root"] --> p1["p₁"] --> p2["p₂"] --> p3["p₃"] --> p0
+```
+
+> **Kid example.** Children sit in a circle and each one may only peek at the shirt colour of the child on their left. They must pick shirt colours so that no two neighbours look the same. One child, the leader, follows a slightly different rule. This session shows a simple rule that always works, even if everyone starts with random shirts, and then uses the same colours to make dancing pairs.
+
 ## 1. The setting
 
+**What this chapter is about:** what the session covered, and the ring where each processor can only see the processor before it.
+
 ### 1.1 What the session covers
+
+**In one sentence:** the session reviewed the leader-election quizzes and presented the solution to the ring colouring and ring matching homework.
 
 The session plan was:
 
@@ -58,7 +82,15 @@ The session plan was:
 3. Home Assignment 3 (introduced).
 4. A repetition of the lecture on **leader election in general graphs**.
 
+> **Kid example.** Like a homework review lesson: first the quiz answers, then a student's homework, then the teacher's model answer.
+
+**Remember:**
+
+- Home Assignment 2 = **ring colouring** + **ring matching**.
+
 ### 1.2 The setting: Dijkstra's directed ring
+
+**In one sentence:** processors sit in a circle, each can read only the small variable of the processor before it, nobody has a name, and only the root p₀ runs a different program.
 
 **Additional context.** The setting below comes from the home-assignment text, which the solution builds on.
 
@@ -76,9 +108,20 @@ flowchart LR
 
 Each arrow points from a processor to the processor that **reads** its variable: *p*₁ reads *x*₀, *p*₂ reads *x*₁, and *p*₀ reads *x*ₙ₋₁.
 
+> **Kid example.** Children sit in a circle with their backs turned so each can see only the child on their left. Nobody wears a name tag, but one child wears a crown (the root) and follows a special rule. Each child has a tiny card that can hold only one small number.
+
+**Remember:**
+
+- **Directed** ring: *pᵢ* reads only *p*₍ᵢ₋₁₎ mod *n*; *p*₀ reads *p*ₙ₋₁.
+- **Constant-size** variables, **no identifiers**, only *p*₀ is special (**semi-uniform**), *n* is known.
+
 ## 2. Colouring and matching on the ring
 
+**What this chapter is about:** how to colour a ring with the fewest colours, and how the same colours tell processors who their partner is, with the proof that it always recovers.
+
 ### 2.1 Optimal vertex coloring of the ring (Question 1)
+
+**In one sentence:** everyone except the root takes the opposite bit of the processor before it, and the root picks 0 or 2 from the last one, giving 2 colours for an even ring and 3 for an odd ring.
 
 #### How many colours are needed?
 
@@ -106,7 +149,7 @@ Read "*x*₍ᵢ₋₁₎ + 1 mod 2" as (*x*₍ᵢ₋₁₎ + 1) mod 2: the oppos
 - **Every non-root processor** takes the opposite of its predecessor, using only colours 0 and 1.
 - **The root** looks at the last processor: if *x*ₙ₋₁ = 1 it takes (1 + 2) mod 3 = **0**; if *x*ₙ₋₁ = 0 it takes (0 + 2) mod 3 = **2**.
 
-Why this gives the right answer: once the root holds 0 or 2, *p*₁ gets 1 in both cases, then *p*₂ gets 0, *p*₃ gets 1, and so on: *xₖ* = 1 for odd *k* and 0 for even *k* ≥ 2. The last processor *p*ₙ₋₁ therefore has colour 1 when *n* is even (its index *n* − 1 is odd), so the root takes 0; and colour 0 when *n* is odd, so the root takes 2. This is exactly the optimal colouring from §3.1.
+Why this gives the right answer: once the root holds 0 or 2, *p*₁ gets 1 in both cases, then *p*₂ gets 0, *p*₃ gets 1, and so on: *xₖ* = 1 for odd *k* and 0 for even *k* ≥ 2. The last processor *p*ₙ₋₁ therefore has colour 1 when *n* is even (its index *n* − 1 is odd), so the root takes 0; and colour 0 when *n* is odd, so the root takes 2. This is exactly the optimal colouring described above.
 
 #### A worked execution
 
@@ -121,11 +164,41 @@ Why this gives the right answer: once the root holds 0 or 2, *p*₁ gets 1 in bo
 
 The final state (2, 1, 0, 1, 0) is the optimal 3-colouring of an odd ring, and running the algorithm again changes nothing.
 
+> **Kid example.** Each child looks left and says "you have black, so I take white" (or the other way round). This works all around the circle, except where the circle closes. If the number of children is even, the last child and the crowned child already differ. If it is odd, they would clash, so the crowned child takes a third colour, red. The crowned child's rule ("look at the last child and pick 0 or 2") makes this happen automatically.
+
+**The root's rule as a table:**
+
+| Last colour *x*ₙ₋₁ | Root computes (*x*ₙ₋₁ + 2) mod 3 | Root's colour |
+|---|---|---|
+| 1 | (1 + 2) mod 3 | 0 |
+| 0 | (0 + 2) mod 3 | 2 |
+
+**The stable colours for an even and an odd ring:**
+
+```mermaid
+flowchart LR
+    a0["n = 4: p₀ = 0"] --> a1["p₁ = 1"] --> a2["p₂ = 0"] --> a3["p₃ = 1"]
+```
+
+```mermaid
+flowchart LR
+    b0["n = 5: p₀ = 2"] --> b1["p₁ = 1"] --> b2["p₂ = 0"] --> b3["p₃ = 1"] --> b4["p₄ = 0"]
+```
+
+**Remember:**
+
+- Chromatic number of a ring: **2 if *n* is even, 3 if *n* is odd**.
+- Non-root: *xᵢ* ← (*x*₍ᵢ₋₁₎ + 1) mod 2, the **opposite bit**.
+- Root: *x*₀ ← (*x*ₙ₋₁ + 2) mod 3, so **0** after a 1 and **2** after a 0.
+- From any start it settles to (0, 1, 0, 1, …) or (2, 1, 0, 1, 0, …).
+
 ### 2.2 Maximum matching on the ring (Questions 2 and 3)
+
+**In one sentence:** the same colours are read as "0 = partner behind me, 1 = partner in front of me, 2 = single", which gives the biggest possible number of pairs within O(n) cycles.
 
 #### The problem †
 
-† The formal statement appears only in the hidden material; the solution itself (§4.2 and §4.3) is visible.
+† The formal statement appears only in the hidden material; the solution itself (Algorithm 4 and its proof below) is visible.
 
 The **maximum matching** problem matters for resource allocation, communication and network design. It asks for the largest set of pairs of neighbouring processors (edges) such that no two pairs share a processor. Formally, a matching *M* ⊆ {(*pᵢ*, *p*₍ᵢ₋₁₎ mod *n*) : *pᵢ* ∈ *P*} is a subset of neighbouring pairs such that, for any two pairs (*pᵢ*, *p*₍ᵢ₋₁₎ mod *n*) and (*pⱼ*, *p*₍ⱼ₋₁₎ mod *n*) in *M*, *p*₍ᵢ₋₁₎ mod *n* ≠ *pⱼ* and *p*₍ⱼ₋₁₎ mod *n* ≠ *pᵢ*. The goal is a matching with the maximum number of pairs. The task: design a **deterministic self-stabilizing** maximum matching algorithm that is always optimal after stabilization, assuming *n* is known.
 
@@ -180,7 +253,7 @@ flowchart LR
 
 *Proof.* By line 5, *x*ₙ₋₁ can only hold 0 or 1. So, starting in any configuration and within one asynchronous cycle, the claim holds by line 3. □
 
-**Technical clarification.** Line 5 guarantees *x*ₙ₋₁ ∈ {0, 1} only **after** *p*ₙ₋₁ has run once. A transient fault can leave *x*ₙ₋₁ = 2, and if *p*₀ reads it before *p*ₙ₋₁ runs, *p*₀ computes (2 + 2) mod 3 = 1. The worked execution in §3.3 shows exactly this: after cycle 1, *x*₀ = 1. So, strictly, Stair 1 is reached within **two** cycles, not one. This changes the count in Lemma 2.4 by one cycle (*n* + 2 instead of *n* + 1) and does **not** affect the O(*n*) result of Theorem 2.1.
+**Technical clarification.** Line 5 guarantees *x*ₙ₋₁ ∈ {0, 1} only **after** *p*ₙ₋₁ has run once. A transient fault can leave *x*ₙ₋₁ = 2, and if *p*₀ reads it before *p*ₙ₋₁ runs, *p*₀ computes (2 + 2) mod 3 = 1. The worked execution in §2.1 shows exactly this: after cycle 1, *x*₀ = 1. So, strictly, Stair 1 is reached within **two** cycles, not one. This changes the count in Lemma 2.4 by one cycle (*n* + 2 instead of *n* + 1) and does **not** affect the O(*n*) result of Theorem 2.1.
 
 **Claim 2.3.** Let altOneZero(*k*) = (1, 0, 1, 0, …) be the alternating sequence of length *k* starting with 1. For *k* ∈ {1, …, *n* − 1} let seqWithoutRoot(*k*) = (*x*₁, …, *xₖ*). Starting in *c*₁, within *n* − 1 asynchronous cycles the network reaches a configuration *c*ₙ in which seqWithoutRoot(*n* − 1) = altOneZero(*n* − 1).
 
@@ -195,9 +268,36 @@ flowchart LR
 
 *Proof.* Invariant (i) uses Invariant (i) of Claim 2.2, then Claim 2.3, then Invariant (ii) of Claim 2.2. Invariant (ii) follows from lines 8 to 10 together with two facts: when *n* is even, **every processor can have a match**; when *n* is odd, **exactly one processor (for example the root) must be single**. Thus Algorithm 4 is a self-stabilizing solution. □ (Lemma 2.4 and Theorem 2.1)
 
+> **Kid example.** After the shirts are settled, the colour tells each child what to do at the dance. White (0): "hold hands with the child behind me". Black (1): "hold hands with the child in front of me". Red (2): "I sit this one out". Because white and black alternate, every white child and the black child next to it point at each other, so they agree. In an odd circle one child (the crowned one in red) must sit out, because you cannot split an odd number into pairs.
+
+**The matching for *n* = 5** (colours 2, 1, 0, 1, 0):
+
+```mermaid
+flowchart LR
+    s["p₀ single"] ~~~ m1["pair: p₁ and p₂"] ~~~ m2["pair: p₃ and p₄"]
+```
+
+**The proof, as stairs:**
+
+```mermaid
+flowchart TD
+    A["Any configuration"] --> B["Stair 1: root colour is 0 or 2"] --> C["Stair 2: p₁ … pₙ₋₁ alternate 1, 0, 1, 0, …"] --> D["Stair 3: root is 0 if n even, 2 if n odd: safe"]
+```
+
+**Remember:**
+
+- Colour **0** = matched with *p*₍ᵢ₋₁₎, **1** = matched with *p*₍ᵢ₊₁₎, **2** = single.
+- **n/2** pairs if *n* is even; **(n − 1)/2** pairs if *n* is odd (the maximum).
+- Proof by **convergence stairs** under a **distributed fair scheduler**: stabilizes within **O(*n*) asynchronous cycles**.
+- Careful: the root may need **two** cycles for Stair 1 (see the Technical clarification).
+
 ## 3. Leader-election review
 
+**What this chapter is about:** the quiz questions and answers on leader election in general graphs and in complete graphs.
+
 ### 3.1 Pre-lecture review questions: leader election
+
+**In one sentence:** the elected leader is the minimal identifier, the distance variable removes fake (floating) identifiers, and randomization breaks symmetry when processors have no names.
 
 The session reviewed these pre-lecture quiz questions. The answers below are the ones the course quiz accepts; guides 11 and 12 explain them in full.
 
@@ -211,7 +311,7 @@ The session reviewed these pre-lecture quiz questions. The answers below are the
 | 12 | What are floating identifiers? | Identifiers that appear in the system state but **belong to no real processor** (left by a transient fault). |
 | 13 | What does *pᵢ* store in the general-graph algorithm? | The identifier of its chosen leader **and the distance** to that leader. |
 | 14 | What is the distance variable for? | To **eliminate floating identifiers**. |
-| 15 | What happens when *pᵢ* reads a neighbour's identifier? | The quiz answer is "none of the other options". What *pᵢ* actually does: it starts from its own ⟨ID, 0⟩, adopts a neighbour's candidate if it is smaller (or equal with a shorter distance), sets its distance to that neighbour's distance + 1, and ignores every neighbour whose distance has already reached *N* (guide 11, §5). |
+| 15 | What happens when *pᵢ* reads a neighbour's identifier? | The quiz answer is "none of the other options". What *pᵢ* actually does: it starts from its own ⟨ID, 0⟩, adopts a neighbour's candidate if it is smaller (or equal with a shorter distance), sets its distance to that neighbour's distance + 1, and ignores every neighbour whose distance has already reached *N* (guide 11, section 2.3). |
 | 16 | What is the first convergence stair? | A predicate saying **no floating identifiers exist**. |
 | 17 | What does the second stair ensure? | Every processor chooses the **minimal identifier of a real processor** as its leader. |
 | 19 | How does the minimal distance of a floating identifier grow? | Processors copy it from neighbours with a distance **one greater**. |
@@ -229,13 +329,33 @@ The session reviewed these pre-lecture quiz questions. The answers below are the
 | 8 | What makes uniform algorithms more subtle than non-uniform ones? | The **absence of unique identifiers**. |
 | 10 | What is assumed in the complete-graph algorithm? | Each step is **a single read or a single write** operation. |
 
+> **Kid example.** In a class vote for the "smallest number" leader, everyone keeps shouting the smallest number they have heard so far. A fake number that nobody really has (a floating identifier) keeps travelling further away, and every time it is passed on, its distance grows by one. When the distance becomes too large (*N*), everyone knows it cannot be real and throws it away.
+
+**Remember:**
+
+- Leader = processor with the **minimal identifier**.
+- Store **leader ID + distance**; the distance removes **floating identifiers** when it reaches *N*.
+- Stair 1: **no floating IDs**; stair 2: everyone picks the **minimal real ID**.
+- Without identifiers, **randomization** breaks symmetry; the scheduler is an **adversary** (SL-game).
+
 ## 4. Summary
 
+**What this chapter is about:** colouring, matching and the proof on one page.
+
 ### 4.1 Recap
+
+**In one sentence:** alternate 0 and 1 around the ring, let the root fix the joint, and read the colours as partners.
 
 - **Ring coloring (Algorithm 3):** non-root processors alternate 0/1; the root picks 0 or 2 from the last processor's colour. Result: 2 colours for even *n*, 3 for odd *n*, which is optimal.
 - **Ring matching (Algorithm 4):** the same variables, read as "0 = matched backwards, 1 = matched forwards, 2 = single". Result: *n*/2 pairs for even *n*, (*n* − 1)/2 for odd *n*.
 - **Proof:** convergence stairs (root in {0, 2}; the rest alternates; root settles) give stabilization in O(*n*) asynchronous cycles.
+
+> **Kid example.** Black, white, black, white around the circle; the crowned child fixes the place where the circle closes; then the colours tell everyone who their dance partner is.
+
+**Remember:**
+
+- Algorithm 3 = **optimal colouring**; Algorithm 4 = same variables + `output()` = **maximum matching**.
+- Stabilization within **O(*n*) asynchronous cycles**.
 
 ## Revision notes and references
 
