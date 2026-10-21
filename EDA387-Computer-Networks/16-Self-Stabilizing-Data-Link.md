@@ -6,13 +6,13 @@
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. More than half of this short lecture is hidden material, and the lecture also says that the details of two proofs were "skipped this year". So the visible, examinable core is: the data-link task, the alternating-bit algorithm, its run example, and the two **statements** (no crash-tolerant data link exists; crashes can create any configuration). The proofs and the crash-resilient algorithm are †.
 
-**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
+**How to read this guide.** Every part starts with **In one sentence**, the whole idea in one line. Then comes the explanation in small steps, a **Kid example** (the same idea told with everyday things), pictures, and a **Remember** list with what you must know for the exam. **Technical clarification** marks a place where the slides are wrong or unclear, and gives the correct version. **Additional context** adds something useful that is not on the slides.
 
 ---
 
 ## Glossary
 
-| Term | Expansion or category | Meaning |
+| Term | Full name | Meaning in simple words |
 |---|---|---|
 | Acknowledgement (ack) | — | A frame the receiver sends back to say "I got it". In the alternating-bit algorithm the ack is just the receiver's current bit. |
 | After-crash state | — | The special state a processor is put in by a crash. Everything it knew before the crash is lost. |
@@ -44,6 +44,7 @@
 
 ## Contents
 
+- [Before you start: the words you need](#before-you-start-the-words-you-need)
 - [1. The data-link task and the alternating-bit algorithm](#1-the-data-link-task-and-the-alternating-bit-algorithm)
   - [1.1 Where this lecture fits](#11-where-this-lecture-fits)
   - [1.2 The data-link task](#12-the-data-link-task)
@@ -62,9 +63,34 @@
   - [3.3 Related topics not on these slides](#33-related-topics-not-on-these-slides)
 - [Revision notes and references](#revision-notes-and-references)
 
+## Before you start: the words you need
+
+- **Link (wire):** the connection between two neighbouring computers, the **sender** S and the **receiver** R.
+- **Frame:** one "envelope" sent over the link. It carries a message plus some extra information (for example a label).
+- **Lost frame:** a frame that disappears on the way and never arrives.
+- **Acknowledgement (ack):** a short reply "I got it".
+- **Timeout:** "no answer for a while, so send it again".
+- **Crash:** a computer suddenly stops and restarts with its memory wiped; the other side is not told.
+- **Asynchrony:** there is no time limit; a frame may arrive very late, so "late" never proves "lost".
+- **FIFO:** frames come out of the link in the same order they went in.
+
+**The link as a picture** (frames in both directions, any of them may be lost):
+
+```mermaid
+flowchart LR
+  S["SENDER S"] -- "frames with messages →" --> R["RECEIVER R"]
+  R -- "← acks" --> S
+```
+
+> **Kid example.** You pass notes to a friend through a long tube. Some notes get stuck and never arrive, some arrive very late, and sometimes one of you falls asleep and forgets everything. This lecture asks: can you invent note rules so that every note arrives exactly once, even after someone falls asleep? The surprising answer is "not by restarting", and that is why we need self-stabilization.
+
 ## 1. The data-link task and the alternating-bit algorithm
 
+**What this chapter is about:** what a data link must do, and the classic alternating-bit algorithm that uses one bit, 0 or 1, to tell new messages from old copies.
+
 ### 1.1 Where this lecture fits
+
+**In one sentence:** this short chapter shows that crashes can never be fixed by "restart and re-initialize", so we need algorithms that recover from any state.
 
 The lecture has a two-part roadmap:
 
@@ -73,7 +99,21 @@ The lecture has a two-part roadmap:
 
 The whole chapter is a **motivation** chapter. It shows that even the simplest network protocol, sending messages over one wire, cannot be protected by "restart and re-initialize" when crashes happen. The only design that still works is one that recovers from *any* state: a self-stabilizing one.
 
+```mermaid
+flowchart LR
+  A["3.1: no restart procedure<br/>survives crashes"] --> B["3.2: crashes can create<br/>ANY configuration"] --> C["so: we need<br/>self-stabilizing algorithms"]
+```
+
+> **Kid example.** If someone can mess up your room in any way at all while you sleep, it is no use having a rule "keep the room tidy from the morning on". You need a rule that **tidies up from any mess**.
+
+**Remember:**
+
+- §3.1 **initialization in the presence of faults** (impossible); §3.2 **arbitrary configuration because of crashes**.
+- A **motivation** chapter: even a single wire needs **self-stabilization**.
+
 ### 1.2 The data-link task
+
+**In one sentence:** the data-link layer wraps each message in a frame and must deliver messages between two neighbours with no duplicates, no gaps and no reordering.
 
 "The task of delivering a message is sophisticated, and may cause message corruption or even loss." Three layers are involved:
 
@@ -85,15 +125,9 @@ Also, the data-link layer is the one "which concerns us".
 
 ```mermaid
 flowchart LR
-    subgraph Sender side
-        N1[Network layer] --> D1[Data link layer]
-        D1 --> P1[Physical layer]
-    end
-    subgraph Receiver side
-        P2[Physical layer] --> D2[Data link layer]
-        D2 --> N2[Network layer]
-    end
-    P1 -- "bits on the wire<br/>may be corrupted or lost" --> P2
+    N1["SENDER:<br/>network layer"] --> D1["SENDER:<br/>data link layer"] --> P1["SENDER:<br/>physical layer"]
+    P1 -- "bits on the wire<br/>may be corrupted or lost" --> P2["RECEIVER:<br/>physical layer"]
+    P2 --> D2["RECEIVER:<br/>data link layer"] --> N2["RECEIVER:<br/>network layer"]
 ```
 
 ```mermaid
@@ -103,7 +137,17 @@ flowchart LR
 
 **Additional context.** Dolev §3.1 adds how the two kinds of damage are handled. **Corruption**: "Error-detection codes are used to identify and discard corrupted frames", so a corrupted frame simply turns into a lost frame. **Loss**: "Frame retransmission is used to cope with the possibility of frame corruption or loss". The alternating-bit algorithm is one such retransmission strategy. Dolev also defines the job exactly (§2.10): the sender has an input queue of messages im1, im2, ...; the receiver has an output queue om1, om2, ...; the output must always be a **prefix** of the input (no duplicates, no reordering, no omissions), and new messages must be added to the output again and again.
 
+> **Kid example.** A letter (the packet) goes into an envelope (the frame). On the front you write some control information (the head), and on the back a check code so the receiver can see whether the envelope was damaged (the tail). The post (the physical layer) may lose or damage envelopes; the data-link layer must make sure every letter still arrives once, in order.
+
+**Remember:**
+
+- Layers: **network** (hands down a packet) → **data link** (frame = **head + packet + tail**) → **physical** (bits).
+- **Corruption** is detected by error-detection codes and turned into **loss**; loss is handled by **retransmission**.
+- Output must be a **prefix** of the input: no duplicates, no reordering, no omissions.
+
 ### 1.3 The alternating-bit algorithm
+
+**In one sentence:** the sender labels each message 0 or 1 and repeats it until the matching ack comes back; the receiver only delivers a frame whose label differs from the last one.
 
 The alternating-bit algorithm "is used to cope with possibility of frame corruption or loss". Its one-sentence idea, from the lecture: **"Every message from the sender is repeatedly sent in a frame to the receiver until acknowledges arrives."**
 
@@ -169,7 +213,29 @@ flowchart TB
 
 **Technical clarification.** In the lecture's receiver code the comparison on line 09 is "FrameBit ≠ bitr" (the ≠ sign is lost when the text is copied, but it is visible in the lecture and in Dolev's Figure 2.14). Also, the counter `j` starts at 1 and is increased **before** `om_j` is written, so taken literally the first delivered message lands in `om_2`. Dolev explains that `i` and `j` "are used only to describe the interface with the network layer"; read line 13 simply as "deliver the next message". Finally, Dolev's chapter 3 text describes the same algorithm with the opposite starting values (`bits = 1`, `bitr = 0`); the lecture follows Dolev's Figure 2.14 (`bits = 0`, `bitr = 1`). Both work, because only "same" or "different" matters.
 
+**The receiver's rule:**
+
+```mermaid
+flowchart LR
+  F["frame arrives<br/>with label b"] --> Q["is b different<br/>from my bitr?"]
+  Q -- "yes: NEW" --> D["bitr := b,<br/>deliver the message"]
+  Q -- "no: old copy" --> I["do not deliver"]
+  D --> A["send ack with bitr"]
+  I --> A
+```
+
+> **Kid example.** You send notes marked with a dot or a cross, taking turns: dot, cross, dot, cross. You keep re-sending the same note until your friend sends back the same mark. Your friend only reads a note if its mark is different from the last one read; a second copy with the same mark is just thrown away.
+
+**Remember:**
+
+- Sender: send ⟨im_i, **bits**⟩; resend on **timeout**; ack with the **same** bit ⇒ flip bit, next message.
+- Receiver: frame bit **≠ bitr** ⇒ new: copy bit, **deliver**; always answer with **bitr**.
+- Start values: **bits = 0**, **bitr = 1** (Figure 2.14); only "same or different" matters.
+- Sender line 12 = recognise the ack; receiver line 15 = send the ack.
+
 ### 1.4 A run of the alternating-bit algorithm
+
+**In one sentence:** even with lost and late frames, the bit lets the receiver throw away old copies, so m1 and m2 are each delivered once.
 
 The lecture animates one run. S starts with `bits = 0`, R with `bitR = 1`. Some frames are lost, and one old frame arrives late.
 
@@ -203,9 +269,22 @@ The lecture ends with the key fact: **"Once the sender receives an acknowledgmen
 
 **Additional context.** The alternating-bit algorithm is **not self-stabilizing**. It works only if it starts from the right configuration (bits 0 and 1 and no stray frames). If it starts with garbage, for example several old frames with mixed labels sitting in the links, the receiver can deliver a wrong or duplicate message, because an old frame can carry "the right bit". Dolev shows it is only **pseudo-self-stabilizing**: it can make a bounded number of mistakes and then works forever. This is exactly what an old exam asked (see section 3.2).
 
+> **Kid example.** Your first note (dot) gets stuck, so you send it twice more. Your friend reads the first copy and answers "dot". You switch to cross for the next note. The second old dot copy arrives late, but your friend already has dot, so it is ignored. Then your cross note arrives and is read.
+
+**Remember:**
+
+- "R received m1 again" = the frame **arrived**, but m1 was **not delivered** twice.
+- **Once S receives ack ⟨1⟩, no frame with label 0 exists**: FIFO links + S never sends 0 again before ack 1.
+- Safe configuration: labels in the order bits, q(s,r), bitr, q(r,s) look like 000…111 (**one border**).
+- The alternating bit is **not self-stabilizing** (only pseudo-self-stabilizing).
+
 ## 2. Crashes and the impossibility of initialization
 
+**What this chapter is about:** why no restart procedure can make a link reliable after crashes, how crashes can create any state at all, and the special cases that still work.
+
 ### 2.1 Theorem: there is no crash-tolerant data-link algorithm
+
+**In one sentence:** with asynchrony, unlimited link capacity, undetectable crashes and frame losses, no restart procedure can guarantee that messages sent after the last crash arrive.
 
 **How a crash is modelled.** "It is usually assumed that a crash causes the sender/receiver to reach an initial state." The crash wipes the processor's memory, and the other side cannot notice it (an **undetectable** crash/resume).
 
@@ -224,7 +303,27 @@ The lecture says "The details are skipped this year". The proof is hidden materi
 
 **Additional context.** Dolev §3.1 points out which messages are being talked about. A crash right after the sender fetched a message, before sending anything, obviously loses that message, since "no information concerning m is available". That is unavoidable and not the point. The question is only about messages fetched **after the last crash**. One would hope that an initialization procedure (for the alternating bit: set `bits` and `bitr` and make sure no labelled frame is in transit) could guarantee this. Dolev: "Surprisingly, as we now show, no such initialization procedure exists."
 
+**All four together make it impossible:**
+
+```mermaid
+flowchart LR
+  A["asynchrony"] --> X["no initialization procedure<br/>can guarantee delivery<br/>after the last crash"]
+  B["unlimited channel capacity"] --> X
+  C["undetectable crash/resume"] --> X
+  D["frame losses"] --> X
+```
+
+> **Kid example.** Your friend falls asleep and wakes up remembering nothing, and you are not told. The tube may still be full of any number of old notes, and nobody knows how long a note can take. Whatever "start again" rule you invent, an unlucky mix of old notes can trick you into thinking your new note arrived when it did not.
+
+**Remember:**
+
+- Crash = back to an **initial state**, **undetectable** by the other side.
+- **Asynchrony + unlimited capacity + undetectable crash/resume + frame loss** ⇒ **no initialization procedure** guarantees delivery of messages fetched **after the last crash**.
+- (Proof skipped this year; it is in section 2.2 †.)
+
 ### 2.2 † The pumping technique (the proof)
+
+**In one sentence:** † by crashing both sides again and again, old frames pile up in the links until the sender can be fooled into thinking a message arrived when it did not.
 
 **Notation.** CrashR is a receiver crash, CrashS a sender crash; "CrashX causes X to perform an initialization procedure".
 
@@ -266,7 +365,17 @@ flowchart TB
 
 **Technical clarification.** One explanation in the hidden part is garbled: "it is possible for the network layer to use the services for the data link layer to use the services of the data-link layer". Dolev's sentence is: "it is possible for the network layer to use the services of the data-link layer to deliver several identical messages in a row." That is why the proof may let the sender fetch "several messages that are identical to m" during the replay. (The same part also has the typo "recive".)
 
+> **Kid example.** A prankster makes you and your friend fall asleep again and again. Each time you wake up, you repeat exactly what you did the first time, so each round leaves one more old note in the tube. When the tube holds all the "I got it!" answers of a normal day, the prankster puts you to sleep once more. You wake, read those old answers in order, and believe your new note arrived, while the prankster simply throws your new notes away.
+
+**Remember:**
+
+- † **Reference execution RE**: crash both, then a loss-free ping-pong until frk convinces S.
+- † **Pumping**: crash S and R alternately and replay RE; each crash adds **one more** old frame to a link.
+- † With fr1 … frk stored in q(r,s), S replays RE, is convinced, fetches the next message; losing S's new frames loses it.
+
 ### 2.3 Crashes can create an arbitrary configuration
+
+**In one sentence:** crashes plus lost frames can put the system into any state at all, so crashes are as bad as a memory-corrupting transient fault.
 
 "A combination of: asynchrony, unlimited channel capacity, and undetectable crash-resume fault model with frame losses can bring a system to any arbitrary states of processors and an arbitrary configuration." The lecture says "The details are skipped this year".
 
@@ -282,7 +391,17 @@ This is stronger than section 2.1. Not only can a message be lost: crashes plus 
 
 **Technical clarification.** The hidden part writes "loosing the frames"; it means "losing".
 
+> **Kid example.** With enough naps and lost notes, the prankster can arrange the tube to hold **any** pile of old notes and leave you and your friend remembering **any** old moment of the day. So for the note rules, a nap is as bad as someone scribbling over your memory.
+
+**Remember:**
+
+- The same four assumptions ⇒ crashes + losses can reach **any configuration** (states from RE, any finite frame sequences from RE in the links).
+- Crashes are as bad as a **transient fault**; true even without undetected corruption.
+- † Built with the pumping technique (F^i_sE copies, i = k1 + k2 + 2).
+
 ### 2.4 † A crash-resilient data link when the number of frames is bounded
+
+**In one sentence:** † if at most bound frames can be in the links, sending clean messages with labels 1 to bound + 1 flushes all old frames.
 
 The impossibility depends on **unlimited** channel capacity. If we know **bound**, "the maximal number of frames that can be in transit", a crash-resilient algorithm exists. The lecture adds: "Crashes are not considered severe type of faults" (Byzantine faults are worse), and "The algorithm uses the initialization procedure, following the crashes of S and R".
 
@@ -321,7 +440,25 @@ sequenceDiagram
 
 **Additional context.** Dolev also says a crash-resilient data link exists when "a bound on the transmission time is known": then you can just wait long enough for every old frame to arrive or vanish.
 
+**Why the clean procedure works, with bound = 2** (so labels 1, 2, 3):
+
+| Old frames in the links | Possible labels | A label that is surely missing |
+|---|---|---|
+| at most 2 | 1, 2, 3 | at least one of them, say x |
+
+When the first ⟨ackClean, x⟩ comes back, it must answer S's own ⟨clean, x⟩, so everything older is gone. After label 3 = bound + 1, only label 3 is in transit.
+
+> **Kid example.** The tube can hold at most 2 old notes. You send "clean 1" until "ok 1" comes back, then "clean 2", then "clean 3". Two old notes can carry at most two of the three numbers, so one number was never in the tube. When that number's "ok" comes back, it must be the answer to **your** note, so the tube is clean.
+
+**Remember:**
+
+- † Needs a known **bound** on frames in transit (or on transmission time).
+- † Send ⟨clean, 1⟩ … ⟨clean, **bound + 1**⟩, each until its ack; then only label bound + 1 is in transit; start the alternating bit with ⟨m_new, 0⟩.
+- † Works because of the **missing-label** idea: bound frames, bound + 1 labels.
+
 ### 2.5 † Duplicates after a receiver crash, and exactly-once delivery
+
+**In one sentence:** † send every message first with label 0 and then with label 1, and deliver only on a 0-then-1 change; then no message is lost or doubled after the last crash.
 
 **The problem.** What should R do with its first frame after a crash? First try: when `<msg, FrameBit>` arrives, set `bitR = FrameBit` and deliver msg. "The Problem: extra copy of msg in the output queue." The sender sends the same frame many times, so several copies can sit in the link. R may have delivered msg before the crash, and now delivers the next copy again: a **duplicate**.
 
@@ -346,7 +483,16 @@ stateDiagram-v2
 
 Why it works (Dolev): if S fetches msg after R crashed, a frame `<0, msg>` must reach R before S starts sending `<1, msg>`, so R sees 0 and then 1 and delivers msg. A message is delivered only on a 0-then-1 change, so stale copies of the same label cannot cause a second delivery.
 
+> **Kid example.** You send each note twice: first in a blue envelope until your friend says "got it", then the same note in a red envelope. Your friend only reads a note when a red envelope comes right after a blue one. Old copies of the same colour never count twice.
+
+**Remember:**
+
+- † Delivering the first frame after an R crash ⇒ possible **duplicate**; not delivering it ⇒ possible **loss**.
+- † Fix: send every message with label **0** then label **1**; deliver only on **0 then 1** ⇒ at most once, and exactly once after the last crash.
+
 ### 2.6 The lesson: why we need self-stabilization
+
+**In one sentence:** since crashes can lead anywhere, the only realistic promise is "from any state, eventually every message arrives": a self-stabilizing data link.
 
 The chain of reasoning of the chapter:
 
@@ -361,9 +507,21 @@ The chain of reasoning of the chapter:
 - **Isn't it bad that safety can be violated for a while?** No algorithm can stop bad things after faults that put it in an arbitrary state; a self-stabilizing one at least recovers, while a normal one has no defined behaviour.
 - **What use is it if a processor never knows the configuration is safe?** If it starts correctly and no fault happens, it is as good as a normal algorithm; after a fault it eventually becomes correct again.
 
+> **Kid example.** Since a prankster can leave your room in any state while you sleep, the only rule that always helps is "whatever the room looks like when I wake up, I will tidy it in the end". That is self-stabilization.
+
+**Remember:**
+
+- Losses + crashes ⇒ no initialization works (2.1) and **any configuration** is possible (2.3).
+- "Start good and stay good" is **doomed** when crashes are possible.
+- Required: **eventually** every message fetched by the sender reaches the receiver, from **any** configuration = **self-stabilizing data link**.
+
 ## 3. Summary and review
 
+**What this chapter is about:** the whole lecture on one page, old exam questions and the related data-link algorithms of the next lecture.
+
 ### 3.1 Recap
+
+**In one sentence:** the alternating bit works from a clean start, crashes can destroy any clean start, so data links must be self-stabilizing.
 
 - The **data-link layer** moves messages between two neighbours over a wire that loses and corrupts frames.
 - The **alternating-bit algorithm** labels messages 0, 1, 0, 1, …; the sender retransmits until the ack with the same bit returns; the receiver delivers only frames whose bit differs from its own. It is correct from a clean start, but **not self-stabilizing**.
@@ -372,7 +530,16 @@ The chain of reasoning of the chapter:
 - † Proofs use the **pumping technique**. † With a known **bound** on frames in transit, the **clean** procedure with bound + 1 labels gives a crash-resilient link; † a 0-then-1 double send gives exactly-once delivery.
 - The conclusion: we need **self-stabilizing** data-link algorithms (next lecture).
 
+```mermaid
+flowchart LR
+  A["alternating bit:<br/>works from a clean start"] --> B["crashes + losses:<br/>no clean restart possible,<br/>any state reachable"] --> C["so: self-stabilizing<br/>data link needed<br/>(guide 13)"]
+```
+
+> **Kid example.** The whole story: dot-and-cross notes work if you start with an empty tube. But naps and lost notes can fill the tube with any mess, and no "start again" rule fixes that. So the note rules must be able to clean up any mess by themselves.
+
 ### 3.2 Old exam questions on this lecture
+
+**In one sentence:** the exams ask true/false questions about the impossibility of initialization, random labels and end-to-end protocols.
 
 Data-link questions appeared in the **Oct 2022** and **2018** exams (true/false items).
 
@@ -389,7 +556,15 @@ Data-link questions appeared in the **Oct 2022** and **2018** exams (true/false 
 
 **Exam tip.** If a true/false sentence combines "crashes" (or "faults"), "asynchronous" and "unbounded" packets in the link with "it is impossible to initialize", the answer is almost always TRUE.
 
+**Remember:**
+
+- "Crashes/faults + asynchronous + unbounded link + impossible to initialize" ⇒ **TRUE**.
+- Random labels need **at least 3** values; random 0/1 is just the alternating bit ⇒ **FALSE**.
+- End-to-end and link-layer protocols use the **same** tools ⇒ "completely different algorithms" is **FALSE**.
+
 ### 3.3 Related topics not on these slides
+
+**In one sentence:** the self-stabilizing data-link algorithms on the cheat sheet (unbounded counter, counter mod cap + 1, random labels) are taught in guide 13.
 
 This lecture has no pre-lecture quiz of its own. The exam cheat sheet, though, lists three data-link algorithms, and they are taught in the **Model Conversions** lecture (Dolev §4.2). In short (details in guide 13):
 
