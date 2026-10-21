@@ -6,13 +6,13 @@
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. *This part of the lecture has no hidden slides, so nothing in this guide carries the † mark.*
 
-**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
+**How to read this guide.** Every part starts with **In one sentence**, the whole idea in one line. Then comes the explanation in small steps, a **Kid example** (the same idea told with everyday things), pictures, and a **Remember** list with what you must know for the exam. **Technical clarification** marks a place where the slides are wrong or unclear, and gives the correct version. **Additional context** adds something useful that is not on the slides.
 
 ---
 
 ## Glossary
 
-| Term | Expansion or category | Meaning |
+| Term | Full name | Meaning in simple words |
 |---|---|---|
 | Attractor | — | Another name for a predicate *Aᵢ* in a convergence-stairs proof: once the system reaches it, it stays in it. |
 | Candidate | — | The leader that processor *pᵢ* currently believes in, together with its distance to it. |
@@ -35,6 +35,7 @@
 
 ## Contents
 
+- [Before you start: the words you need](#before-you-start-the-words-you-need)
 - [1. Leader election and convergence stairs](#1-leader-election-and-convergence-stairs)
   - [1.1 Why leader election?](#11-why-leader-election)
   - [1.2 Proof technique: convergence stairs](#12-proof-technique-convergence-stairs)
@@ -49,9 +50,31 @@
   - [4.1 Recap](#41-recap)
 - [Revision notes and references](#revision-notes-and-references)
 
+## Before you start: the words you need
+
+- **Identifier (ID):** every processor has its own name, which is a number: 1, 2, 3, … No two processors have the same number.
+- ***N*:** a number that is **at least** as big as the number of processors. All IDs are between 1 and *N*.
+- **Leader:** the one processor everybody agrees on. In this lecture the leader is the processor with the **smallest** ID.
+- **Candidate:** the processor that *I* currently think is the leader.
+- **Distance:** how many hops (links) I think I am away from my candidate.
+- **Floating identifier (ghost):** an ID that appears in memory after a fault, but **no real processor has it**.
+
+**Every processor shows a pair ⟨candidate, distance⟩.** Here everyone agrees that 1 is the leader:
+
+```mermaid
+flowchart LR
+  A(("ID 1<br/>⟨1, 0⟩")) --- B(("ID 5<br/>⟨1, 1⟩")) --- C(("ID 7<br/>⟨1, 2⟩"))
+```
+
+> **Kid example.** A class must pick a class captain: the child with the **smallest** student number. The children are not all in one room; each child can only whisper with the children sitting next to them. Each child says "I think the captain is number ⟨so-and-so⟩, and I heard it ⟨this many⟩ whispers away". The puzzle: after a big mess (some children even "remember" a number that belongs to nobody), can everyone still agree on the real captain?
+
 ## 1. Leader election and convergence stairs
 
+**What this chapter is about:** why networks need a leader, and a proof method in which you climb a staircase of facts, one step at a time, until you reach "safe".
+
 ### 1.1 Why leader election?
+
+**In one sentence:** once one node is chosen as the leader, many hard distributed jobs become easy, because the leader can coordinate the others.
 
 Many distributed tasks become simple once one node is chosen as a leader that can coordinate the others. Leader election is used for:
 
@@ -65,7 +88,24 @@ Many distributed tasks become simple once one node is chosen as a leader that ca
 - **Decentralized systems:** in peer-to-peer and blockchain networks, consensus algorithms decide who may create new blocks or validate transactions.
 - **Resource allocation:** choosing the node that allocates limited resources fairly and efficiently.
 
+```mermaid
+flowchart LR
+  L(("LEADER")) --> A["decides for the group<br/>(coordinator)"]
+  L --> B["shares out the work<br/>(load balancing)"]
+  L --> C["collects sensor data<br/>(sensor networks, IoT)"]
+  L --> D["designated router<br/>(OSPF)"]
+```
+
+> **Kid example.** A class picks one class representative. Once every pupil knows who the representative is, questions to the teacher can go through that one person, and the class does not have to argue all together about every small thing.
+
+**Remember:**
+
+- A leader makes distributed tasks simple: it can **coordinate** and even compute centrally.
+- Uses: coordinator, load balancing, cluster management, **OSPF designated router**, MANETs, sensor networks, IoT gateways, P2P and blockchain consensus, resource allocation.
+
 ### 1.2 Proof technique: convergence stairs
+
+**In one sentence:** prove that the system reaches and keeps a first good fact *A*₁, then a stronger fact *A*₂, and so on, until the last fact *Aₖ* means "safe".
 
 The **convergence stairs** technique proves that a self-stabilizing algorithm converges by climbing a staircase of predicates *A*₁, *A*₂, …, *Aₖ* (*k* > 1):
 
@@ -87,16 +127,38 @@ flowchart LR
     D --> S4["cm → cm+1"] --> Ak["Ak holds:<br/>c_safe"]
 ```
 
+> **Kid example.** Climbing stairs. You first prove you can reach the first step and never fall below it; then that from the first step you can reach the second and never fall below it; and so on to the top floor, which is "safe". Each step is "stronger" than the one below: if you are on step 3, you are certainly also above step 1.
+
+**A tiny example of "refinement":** *A*₁ = "there are no ghosts", *A*₂ = "everybody believes in the real captain". If *A*₂ is true, *A*₁ must be true too (you cannot believe in the real captain and in a ghost at the same time). So *A*₂ refines *A*₁.
+
+**Remember:**
+
+- Stairs *A*₁, …, *Aₖ* (*k* > 1), each a **predicate**; *A*ᵢ₊₁ **refines** *Aᵢ* (*A*ᵢ₊₁ true ⇒ *Aᵢ* true). Also called **attractors**.
+- Prove: reach *A*₁ and stay; from *Aᵢ* reach *A*ᵢ₊₁ and stay; *Aₖ* = **safe configuration**.
+
 ## 2. The task and the algorithm
 
+**What this chapter is about:** the exact task, why the obvious algorithm gets stuck on a "ghost" leader, and the clever fix with distances.
+
 ### 2.1 The task and the assumptions
+
+**In one sentence:** every processor has a unique ID in 1 to *N*, and every processor must learn the ID of the one with the smallest ID.
 
 - Every processor has a **unique identifier in the range 1 to *N***, where *N* is an upper bound on the number of processors in the system.
 - **The leader election task** is to **inform every processor of the identifier of a single processor in the system**; that single processor, with the elected identifier, is the **leader**. Here the processor with the **minimum identifier** is elected.
 
 **Additional context (Dolev §2.9).** usually the processor with the minimal (or maximal) identifier is elected. Leader election is a fundamental task because a distributed task can often be performed by electing a leader and then letting it compute centrally.
 
+> **Kid example.** Every child has a different student number between 1 and *N*. The rule is simple: the child with the smallest number is the captain, and every child must end up knowing that number.
+
+**Remember:**
+
+- Unique IDs in **1 to *N*** (*N* = known upper bound on the number of processors).
+- Task: every processor learns the ID of **one** leader; here the **minimum** ID.
+
 ### 2.2 Why the naive algorithm is not self-stabilizing: floating identifiers
+
+**In one sentence:** after a fault, memory can contain a "ghost" ID smaller than every real ID, and the naive rule "always take the smallest" then believes the ghost forever.
 
 A simple non-stabilizing algorithm: each processor starts with itself as candidate, repeatedly tells its neighbours its candidate, and switches to any smaller candidate it hears about. In a clean start this elects the minimum identifier.
 
@@ -120,7 +182,22 @@ flowchart TB
 
 With the naive rule "switch to the smallest candidate you hear", 0 is smaller than every real identifier, so **every processor keeps declaring 0 as the leader forever**, and the system never elects a real processor.
 
+```mermaid
+flowchart LR
+  A["a fault writes leader = 0<br/>everywhere"] --> B["naive rule: take the<br/>smallest ID you hear"] --> C["0 is smaller than<br/>every real ID"] --> D["everyone keeps 0<br/>FOREVER"]
+```
+
+> **Kid example.** A rumour goes round: "the class captain is number 0". But there is no pupil with number 0! With the rule "always believe the smallest number", every child believes 0, because 0 is smaller than every real number. Nobody can ever prove it wrong, so the class is stuck with a captain who does not exist.
+
+**Remember:**
+
+- **Floating identifier** = an ID in the initial configuration that **no processor has** (a ghost).
+- Example: 8 processors, every leader variable = **0**; 0 is not in 1 to *N*, so it is floating.
+- The naive "take the smallest" rule keeps the ghost **forever**: not self-stabilizing.
+
 ### 2.3 The self-stabilizing algorithm
+
+**In one sentence:** every processor publishes ⟨candidate, distance⟩, adds one to the distance when it copies a neighbour's candidate, and ignores any pair whose distance has reached *N*, so ghosts slowly "move away" and are dropped.
 
 The fix uses **distance variables and the bound *N*** to eliminate floating identifiers. Each processor *pᵢ* publishes a pair ⟨leaderᵢ, disᵢ⟩: its candidate and its distance from that candidate. Each processor reads its neighbours' pairs and chooses the candidate with the **lexicographically lowest pair of identifier and distance**, but **ignores any pair whose distance has reached *N***.
 
@@ -162,9 +239,38 @@ flowchart TD
 
 Why does the distance help? A real leader keeps publishing itself at distance 0, so its identifier is refreshed at small distances forever. A floating identifier has **no real source**: nobody publishes it at distance 0, so every time it is copied, its distance **grows by one**. Once its distance reaches *N* everybody ignores it.
 
+**Comparing pairs "lexicographically"** (first the ID; only if the IDs are equal, the distance):
+
+| Pair A | Pair B | Which is lower? | Why |
+|---|---|---|---|
+| ⟨2, 5⟩ | ⟨3, 0⟩ | ⟨2, 5⟩ | 2 < 3; the distance is not even looked at |
+| ⟨1, 3⟩ | ⟨1, 1⟩ | ⟨1, 1⟩ | same ID, 1 < 3 |
+| ⟨0, 8⟩ with *N* = 8 | ⟨4, 0⟩ | ⟨0, 8⟩ is **ignored** | its distance is not < *N* |
+
+**A real leader versus a ghost:**
+
+```mermaid
+flowchart LR
+  R["REAL leader 1:<br/>says ⟨1, 0⟩ in every iteration"] --> R2["its neighbours: ⟨1, 1⟩<br/>always fresh, small distances"]
+  G["GHOST 0:<br/>nobody says ⟨0, 0⟩"] --> G2["every copy adds 1:<br/>⟨0, 1⟩, ⟨0, 2⟩, ..."] --> G3["distance reaches N:<br/>everybody ignores it"]
+```
+
+> **Kid example.** Every morning each child forgets yesterday's answer and starts again with "I am the captain, 0 whispers away". Then the child asks the neighbours "who is your captain, and how many whispers away?" and keeps the smallest name it hears, adding one whisper. The real captain shouts "it's me, 0 whispers!" every morning, so the real name is always fresh. A made-up name (a ghost) has nobody to shout it, so it gets one whisper further away every time it is passed on, and once it is *N* whispers away (more whispers than there are children), everyone knows it cannot be true and ignores it.
+
+**Remember:**
+
+- Publish **⟨leaderᵢ, disᵢ⟩**; choose the **lexicographically lowest** ⟨ID, distance⟩.
+- Line 02: **restart** every iteration with ⟨ID(*i*), 0⟩ (no memory of old beliefs).
+- Lines 06–08: adopt a neighbour's pair only if **dis < *N*** and (smaller ID, or same ID with shorter distance); take **dis + 1**.
+- A real leader is refreshed at distance 0; a **ghost's distance only grows**, and at *N* it is **ignored**.
+
 ## 3. Correctness and a worked example
 
+**What this chapter is about:** the two-step staircase proof (first the ghosts vanish, then the real minimum wins), and the full eight-processor example round by round.
+
 ### 3.1 Correctness with two convergence stairs
+
+**In one sentence:** stair 1: ghost IDs disappear because their distance keeps growing up to *N*; stair 2: the smallest real ID then spreads like a BFS tree.
 
 #### The two stairs
 
@@ -173,7 +279,18 @@ Why does the distance help? A real leader keeps publishing itself at distance 0,
 
 *A*₂ refines *A*₁: if every processor has chosen the real minimum identifier, then certainly no floating identifier is around.
 
+```mermaid
+flowchart LR
+  G["ground floor:<br/>any mess"] --> A1["STAIR A1:<br/>no ghosts"] --> A2["STAIR A2 (top):<br/>everyone's leader =<br/>smallest real ID (safe)"]
+```
+
 **Where can a floating identifier hide?** In processor *pᵢ*'s local array leaderᵢ[1, …, δ], in its local variable candidate, and in the field leaderᵢ of its communication register. The **distance** of a floating identifier found in leaderᵢ[*j*], candidate or leaderᵢ is disᵢ[*j*], distance or disᵢ, respectively.
+
+| A ghost can hide in... | ...and its distance is then |
+|---|---|
+| leaderᵢ[*j*] (the copy *pᵢ* read from neighbour *pⱼ*) | disᵢ[*j*] |
+| candidate (local variable) | distance |
+| leaderᵢ (the register *pᵢ* publishes) | disᵢ |
 
 #### Stair 1: Lemma 2.5, floating identifiers disappear
 
@@ -188,6 +305,13 @@ Why does the distance help? A real leader keeps publishing itself at distance 0,
 5. Therefore all floating identifiers are eventually eliminated. ∎
 
 The lecture's informal version: let floatIdMin be the smallest of all floating identifiers. Its distance increases within every asynchronous cycle (an induction on the distance of *pᵢ* from where floatIdMin is held). Eventually the condition in line 06 makes everybody ignore floatIdMin.
+
+```mermaid
+flowchart LR
+  A["smallest ghost<br/>distance = d"] -- "O(Δ) rounds:<br/>every copy adds 1" --> B["smallest ghost<br/>distance ≥ d + 1"] -- "... repeat ..." --> C["distance reaches N"] -- "line 06: dis < N fails" --> D["ghost ignored:<br/>A1 holds"]
+```
+
+> **Kid example.** A rumour "the captain is Zed", but there is no pupil called Zed. Each time the rumour is passed on, it gets a "heard it from someone who heard it from…" counter that goes up by one. Nobody can ever reset that counter to 0, because Zed does not exist to say "it's me". If the counter is higher than the number of pupils in the school, the rumour cannot be true, so people stop believing it.
 
 #### Stair 2: Theorem 2.3, the minimum identifier wins
 
@@ -209,7 +333,20 @@ flowchart LR
 
 **Additional context (reasoning).** the algorithm also computes BFS distances from the leader for free: each processor's distance converges to its real hop distance from the minimum-identifier processor, as in the worked example below.
 
+> **Kid example.** Once the ghost rumours are gone, the real smallest-number child keeps saying "it's me, 0 whispers". The children next to them say "1 whisper", the next ones "2 whispers", and so on, like ripples in a pond. Soon every child knows the real captain and how far away they are.
+
+**Remember:**
+
+- *A*₁: **no floating identifier**. *A*₂ (**safe**): everyone's leader = **minimum real ID**. *A*₂ refines *A*₁.
+- Ghosts can hide in leaderᵢ[*j*], candidate, leaderᵢ (distances disᵢ[*j*], distance, disᵢ).
+- **Lemma 2.5**: the minimum ghost distance **grows every O(Δ) rounds**; at *N* the ghost is ignored ⇒ *A*₁.
+- **Theorem 2.3**: then the minimum ID spreads **like BFS** (induction on distance) ⇒ safe.
+- Without *A*₁ the proof fails: the minimum ID *z* might be a ghost.
+- Bonus: distances become the **BFS distances** from the leader.
+
 ### 3.2 A complete worked example
+
+**In one sentence:** with *N* = 8 and every register ⟨0, 0⟩, the ghost 0 survives 8 rounds while its distance climbs to 8, then everyone drops it and the real leader 1 spreads in 3 more rounds.
 
 Take the floating-identifier example from Section 2.2 with *N* = 8: every register starts as ⟨0, 0⟩. To keep it short, suppose every processor reads all its neighbours and then writes, all in the same round (this is one particular fair schedule). Each line shows ⟨leader, dis⟩ for processors 1 to 8 after that round.
 
@@ -231,14 +368,61 @@ What happens:
 - **Round 9.** All distances are 8 = *N*, so the test dis < *N* fails everywhere and every processor falls back to itself. *A*₁ now holds: no floating identifier exists.
 - **Rounds 10–12 (stair 2).** The real minimum identifier 1 spreads hop by hop. Processors 5, 6 and 8 (neighbours of 1) get distance 1; processors 2, 3 and 7 get distance 2; processor 4 gets distance 3. From round 12 on nothing changes: this is a safe configuration, and the distances are exactly the hop distances from processor 1.
 
+**Two rows checked by hand:**
+
+- Round 10, *p*₃: its neighbours 7, 6 and 2 showed ⟨7,0⟩, ⟨6,0⟩, ⟨2,0⟩ in round 9. The lowest is ⟨2,0⟩, and 2 < 3, so *p*₃ writes ⟨2, 0 + 1⟩ = ⟨2,1⟩.
+- Round 11, *p*₂: its neighbours 3, 8 and 4 showed ⟨2,1⟩, ⟨1,1⟩, ⟨2,1⟩ in round 10. The lowest is ⟨1,1⟩, so *p*₂ writes ⟨1,2⟩.
+
+**The final picture** (everyone's leader is 1; the number after the comma is the distance from processor 1):
+
+```mermaid
+flowchart TB
+    n1(("1<br/>⟨1,0⟩")) --- n5(("5<br/>⟨1,1⟩"))
+    n1 --- n6(("6<br/>⟨1,1⟩"))
+    n1 --- n8(("8<br/>⟨1,1⟩"))
+    n5 --- n7(("7<br/>⟨1,2⟩"))
+    n5 --- n6
+    n7 --- n3(("3<br/>⟨1,2⟩"))
+    n3 --- n6
+    n3 --- n2(("2<br/>⟨1,2⟩"))
+    n8 --- n2
+    n2 --- n4(("4<br/>⟨1,3⟩"))
+```
+
+**The timeline:**
+
+```mermaid
+flowchart LR
+  A["rounds 1–8:<br/>ghost 0, distance 1, 2, ..., 8"] --> B["round 9:<br/>8 = N, ghost dropped,<br/>everyone back to itself"] --> C["rounds 10–12:<br/>real ID 1 spreads<br/>1, 2, 3 hops"] --> D["from round 12:<br/>SAFE, nothing changes"]
+```
+
+> **Kid example.** For 8 mornings the whole class still believes the ghost captain "0", but every morning the rumour is one whisper older. On morning 9 the rumour is 8 whispers old, which is too many for a class of 8, so everyone throws it away and says "then I am the captain myself". In the next three mornings, the real smallest number, 1, spreads out like ripples, and from then on everybody agrees.
+
+**Remember:**
+
+- *N* = 8, all registers ⟨0, 0⟩. Rounds 1–8: ⟨0, 1⟩ … ⟨0, 8⟩ (ghost distance +1 per round).
+- Round 9: distance 8 = *N* ⇒ ghost ignored ⇒ everyone ⟨own ID, 0⟩ ⇒ *A*₁.
+- Rounds 10–12: ID 1 spreads; final distances = hop distances from 1 (5, 6, 8 at 1; 2, 3, 7 at 2; 4 at 3).
+
 ## 4. Summary
 
+**What this chapter is about:** the whole lecture on one page.
+
 ### 4.1 Recap
+
+**In one sentence:** with distances and the bound *N*, ghost leaders fade away and the smallest real ID wins, proved with two convergence stairs.
 
 - **Convergence stairs:** prove the system reaches and stays in *A*₁, then in the stronger *A*₂, …, up to *Aₖ* = safe.
 - **Leader election in ID-based general graphs:** unique identifiers in 1 to *N*; every processor must learn the identifier of one leader (the minimum).
 - **Floating identifiers** (ghost identifiers from the arbitrary start) break the naive algorithm. The fix: publish ⟨candidate, distance⟩, add one to the distance when copying, and **ignore any pair with distance ≥ *N***.
 - **Proof:** stair *A*₁ (Lemma 2.5): the minimum distance of a floating identifier grows every O(Δ) rounds until it reaches *N*, so floating identifiers vanish. Stair *A*₂ (Theorem 2.3): the minimum real identifier then spreads like a BFS tree, giving a safe configuration.
+
+```mermaid
+flowchart LR
+  A["ghost IDs possible"] --> B["publish ⟨candidate, distance⟩,<br/>+1 per copy, ignore ≥ N"] --> C["A1: ghosts gone<br/>(Lemma 2.5)"] --> D["A2: smallest real ID<br/>everywhere (Theorem 2.3)"]
+```
+
+> **Kid example.** The whole story: the class wants the smallest-number child as captain. After a mess, a ghost number might be going round. Because every rumour gets one whisper older each time it is passed on, and only the real captain can say "0 whispers", the ghost becomes too old and is thrown away, and then the real captain's number spreads to everybody.
 
 ## Revision notes and references
 
