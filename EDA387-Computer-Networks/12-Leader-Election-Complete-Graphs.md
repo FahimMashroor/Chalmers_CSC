@@ -6,13 +6,13 @@
 
 **† Supplementary material:** content that comes only from hidden PowerPoint slides. It may not be part of this year's examinable material. *This part of the lecture has no hidden slides, so nothing in this guide carries the † mark.*
 
-**Notes in the text.** Paragraphs that begin with **Technical clarification** mark places where the lecture material is wrong, inconsistent or imprecise, and give the correct statement. Paragraphs that begin with **Additional context** add material from outside the lecture, such as the course book (Dolev), old exams, the pre-lecture quizzes or general knowledge.
+**How to read this guide.** Every part starts with **In one sentence**, the whole idea in one line. Then comes the explanation in small steps, a **Kid example** (the same idea told with everyday things), pictures, and a **Remember** list with what you must know for the exam. **Technical clarification** marks a place where the slides are wrong or unclear, and gives the correct version. **Additional context** adds something useful that is not on the slides.
 
 ---
 
 ## Glossary
 
-| Term | Expansion or category | Meaning |
+| Term | Full name | Meaning in simple words |
 |---|---|---|
 | Anonymous system | Uniform system | All processors are identical: same program, no identifiers. |
 | Atomic step | — | A step the scheduler cannot interrupt or look inside. |
@@ -36,6 +36,7 @@
 
 ## Contents
 
+- [Before you start: the words you need](#before-you-start-the-words-you-need)
 - [1. Deterministic leader election without identifiers](#1-deterministic-leader-election-without-identifiers)
   - [1.1 The question: leader election without identifiers](#11-the-question-leader-election-without-identifiers)
   - [1.2 A deterministic solution under a central daemon](#12-a-deterministic-solution-under-a-central-daemon)
@@ -52,9 +53,36 @@
   - [4.1 Recap](#41-recap)
 - [Revision notes and references](#revision-notes-and-references)
 
+## Before you start: the words you need
+
+- **Complete graph:** every processor is connected to **every** other processor. Everybody can see everybody.
+- **Anonymous:** the processors have **no names (no IDs)** and run exactly the same program. They are like identical twins.
+- **Deterministic:** no randomness. The same situation always gives the same action.
+- **Randomized:** the processor may **flip a coin** and act on the result.
+- **Scheduler (adversary):** the "bad guy" who decides who moves next and tries to stop the algorithm from working.
+- **Expected value:** the average you get if you repeat something very many times. For example, a fair coin needs on average **2** throws to show heads.
+
+**A complete graph with 4 processors** (every pair is linked):
+
+```mermaid
+flowchart LR
+  A((p1)) --- B((p2))
+  A --- C((p3))
+  A --- D((p4))
+  B --- C
+  B --- D
+  C --- D
+```
+
+> **Kid example.** Five identical twins sit around a table, all wearing the same clothes and with no name tags. They must choose exactly **one** of them to answer the phone. If they all follow the same rule at the same time, they all pick up or nobody does. This lecture shows when a simple rule is enough, when it is not, and how flipping coins helps.
+
 ## 1. Deterministic leader election without identifiers
 
+**What this chapter is about:** can identical processors elect one leader without coins? Yes if they move one at a time, no if they may move together.
+
 ### 1.1 The question: leader election without identifiers
+
+**In one sentence:** without IDs all processors look the same, so something must make one of them different ("break the symmetry").
 
 The first part of the lecture elected the minimum identifier in an ID-based network. Now the question is:
 
@@ -64,7 +92,22 @@ A leader election algorithm must end in a configuration where **exactly one** pr
 
 **Additional context (Dolev §2.9).** in an ID-based complete graph the problem is trivial: every processor repeatedly appoints the processor with the maximal identifier. The difficulty here comes purely from having no identifiers.
 
+```mermaid
+flowchart LR
+  A["START: all identical<br/>(symmetric)"] -- "something must<br/>break the symmetry" --> B["END: one leader,<br/>the others followers<br/>(NOT symmetric)"]
+```
+
+> **Kid example.** If the children have name tags, it is easy: "the child with the biggest number answers the phone". Without name tags, all the children are the same, so you need some trick to make exactly one of them different.
+
+**Remember:**
+
+- The final configuration (one leader) is **not symmetric**; anonymous processors start symmetric ⇒ need **symmetry breaking**.
+- With IDs in a complete graph it is trivial (pick the maximal ID).
+- Whether a deterministic solution exists **depends on the scheduler**.
+
 ### 1.2 A deterministic solution under a central daemon
+
+**In one sentence:** if only one person moves at a time, the rule "stand up if nobody else is standing, otherwise sit down" always ends with exactly one person standing.
 
 Under the **central daemon** model, **exactly one** processor among all processors is selected, arbitrarily, by an adversarial scheduler, to take a single atomic step.
 
@@ -86,7 +129,26 @@ A possible run with five people (S = standing, s = sitting), in the spirit of th
 
 From the third pick on, exactly one person (person 5) is standing, and it stays that way.
 
+**The rule, as a picture:**
+
+```mermaid
+flowchart LR
+  P["you are picked:<br/>look at everybody else"] --> Q["is anybody else<br/>standing?"]
+  Q -- "no" --> U["STAND UP"]
+  Q -- "yes" --> D["SIT DOWN"]
+```
+
+> **Kid example.** A teacher taps one child on the shoulder at a time. The tapped child looks around: "Is anybody else standing? No? Then I stand. Yes? Then I sit." Because only one child moves at a time, two children can never jump up at the same moment, so the class always ends with exactly one child standing.
+
+**Remember:**
+
+- **Central daemon** = one processor per atomic step.
+- Rule: **stand if nobody else stands, otherwise sit**.
+- After the first pick at least one stands; extra standers sit when picked; then exactly one stays standing forever.
+
 ### 1.3 No deterministic solution under a distributed daemon
+
+**In one sentence:** if the scheduler may move everybody at the same moment, identical processors always do the same thing, so they all stand, all sit, all stand, … forever.
 
 Under the **distributed daemon** model, an arbitrary number of processors are selected by an adversarial scheduler to **concurrently** take atomic steps. Now the same rule fails:
 
@@ -106,9 +168,21 @@ Since all processors are identical, start in the same state and see the same thi
 
 **Additional context (Dolev §2.9).** the book concludes that there is no self-stabilizing uniform leader election algorithm without a central daemon (meaning a deterministic one); the randomized algorithm below needs no central daemon.
 
+> **Kid example.** Now the teacher shouts "everybody, go!". All the children are sitting, each one sees nobody standing, so **all** stand up together. Next "go!": each sees others standing, so **all** sit down together. Identical children with the same rule and the same view always do the same thing, so this goes on forever. Only a coin flip (something different for each child) can break the tie.
+
+**Remember:**
+
+- **Distributed daemon** = any number of processors move **concurrently**.
+- Identical processors + same view + deterministic rule ⇒ **same action** ⇒ the scheduler keeps them in step forever.
+- **No deterministic solution under a distributed daemon** ⇒ use **randomization**.
+
 ## 2. Randomized self-stabilization
 
+**What this chapter is about:** what "randomized self-stabilizing" means, why it matters exactly when the scheduler can see a coin, and a game (scheduler against luck) that turns probability proofs into simple ones.
+
 ### 2.1 Randomized self-stabilization
+
+**In one sentence:** a randomized algorithm is self-stabilizing if, from any start and against any fair scheduler, it reaches a safe configuration within a finite expected number of rounds.
 
 **Assumptions and definitions:**
 
@@ -121,28 +195,51 @@ Since all processors are identical, start in the same state and see the same thi
 
 **Randomized algorithms are often used to break symmetry** in a network of totally identical processors: if each processor flips its own coin, they will sooner or later get different results.
 
+> **Kid example.** Five identical twins must pick one of them to answer the phone. If each one flips a coin, sooner or later exactly one gets heads while the others get tails. Nobody can say exactly when, but on average it does not take forever.
+
+**Remember:**
+
+- Scheduler = **adversary**: fair, unlimited resources, chooses **online**.
+- One atomic step at a time; a step = **one read or write** + local computation.
+- **Randomized self-stabilizing for LE**: any start, any fair scheduler ⇒ safe configuration within a finite (expected) number of rounds.
+- Randomization **breaks symmetry**.
+
 ### 2.2 Coarse versus fine atomicity
+
+**In one sentence:** with coarse atomicity the coin result is written before the scheduler can see it; with fine atomicity the scheduler sees the coin first and can play tricks.
 
 When a processor tosses a coin, can the adversary see the result before the processor acts on it? This depends on the **atomicity** assumed:
 
 - **Coarse atomicity, less power to the adversary.** A coin toss is an internal operation that is **not separable from the next read or write**. The adversary is **unaware** of the algorithm's random choice before that read or write has happened.
 - **Fine atomicity, more power to the adversary.** A coin toss is a **separate operation** from the next read or write. The adversary **is aware** of the random choice before the read or write, and can schedule other processors in between.
 
+**Coarse atomicity: one atomic step** (nothing can happen in the middle)
+
 ```mermaid
 flowchart LR
-    subgraph Coarse["Coarse atomicity: one atomic step"]
-        direction LR
-        C1["toss coin"] --> C2["write result"]
-    end
-    subgraph Fine["Fine atomicity: two atomic steps"]
-        direction LR
-        F1["toss coin"] -. "scheduler can see the result<br/>and run others here" .-> F2["write result"]
-    end
+    C1["toss coin"] --> C2["write result"]
+```
+
+**Fine atomicity: two atomic steps** (the scheduler peeks in the middle)
+
+```mermaid
+flowchart LR
+    F1["toss coin"] -. "scheduler can see the result<br/>and run others here" .-> F2["write result"]
 ```
 
 We will see that the leader election algorithm below **works under coarse atomicity** (Lemma 2.6) and **fails under fine atomicity** (Lemma 2.7).
 
+> **Kid example.** Coarse atomicity is like tossing a coin under a cup and acting on it in the same instant: the troublemaker (the scheduler) cannot peek. Fine atomicity is like tossing the coin openly on the table and only acting a moment later: the troublemaker sees the result first and can let other players move in a way that spoils your plan.
+
+**Remember:**
+
+- **Coarse**: toss + next read/write = **one** atomic step ⇒ adversary **cannot see** the coin ⇒ **less** power.
+- **Fine**: toss = **separate** step ⇒ adversary **sees** the coin ⇒ **more** power.
+- The leader election algorithm **works under coarse** (Lemma 2.6), **fails under fine** (Lemma 2.7).
+
 ### 2.3 The scheduler-luck game
+
+**In one sentence:** pretend "luck" chooses the coin results; if luck can win with combined probability *cp* in *r* rounds, the real algorithm stabilizes in at most *r*/*cp* expected rounds.
 
 **Purpose:** to prove **upper bounds on the stabilization time of randomized algorithms** via probability calculations. Analysing every possible outcome of every random choice is very complicated, especially for self-stabilizing algorithms that make no assumption about the initial state. The **SL-game** avoids this: it **fixes** the outcome of the random function, so the proof looks like a proof of a deterministic algorithm.
 
@@ -175,6 +272,10 @@ sequenceDiagram
     end
 ```
 
+**Examples of *p* = *g*/*h*:** luck fixes a fair coin to "heads": *g* = 1 of *h* = 2, so *p* = 1/2. Luck fixes a die to "5 or 6": *g* = 2 of *h* = 6, so *p* = 1/3.
+
+> **Kid example.** Two players play a board game with the algorithm. The **scheduler** is a naughty player who decides whose turn it is and wants the game to go badly. **Luck** is a friendly player who is allowed to "decide" what the dice show, but every time luck does so, we write down how unlikely that throw was. In the end we multiply all those chances together: that is *cp*.
+
 **Definitions.**
 
 - If luck intervenes ℓ times and the *x*-th intervention has probability Pr(*x*), the **combined probability** is
@@ -185,6 +286,8 @@ cp = \prod_{x=1}^{\ell} \Pr(x).
 
 - ***r*** is the expected number of rounds until stabilization, assuming every intervention succeeds.
 - Luck has a **(*cp*, *r*)-strategy** to win the game if it has a strategy to reach a safe configuration in an expected number of at most *r* rounds, with interventions whose combined probability is no more than *cp*.
+
+**Example:** luck fixes three fair coins. Then *cp* = ½ · ½ · ½ = 1/8.
 
 #### Theorem 2.4: from a luck strategy to an expected time
 
@@ -205,9 +308,32 @@ cp = \prod_{x=1}^{\ell} \Pr(x).
 
 **Additional context (checking the sum).** the formula Σ *x*(1 − *q*)ˣ⁻¹*q* = 1/*q* is the mean of a geometric distribution. Quick check with *q* = 1/2: 1·½ + 2·¼ + 3·⅛ + 4·1/16 + … = 2 = 1/*q*.
 
+```mermaid
+flowchart LR
+  T1["try 1<br/>(r rounds)"] -- "real coins disagree<br/>(prob 1 − cp)" --> T2["try 2<br/>(r rounds)"] -- "disagree again" --> T3["try 3 ..."]
+  T1 -- "coins agree<br/>(prob cp)" --> S["SAFE"]
+  T2 -- "agree (prob cp)" --> S
+  T3 -- "agree (prob cp)" --> S
+```
+
+On average we need 1/*cp* tries, and each try costs *r* rounds, so on average *r* · (1/*cp*) = *r*/*cp* rounds.
+
+> **Kid example.** To win a game you need a lucky streak that happens with probability *cp* = 1/8 and takes *r* = 10 rounds to play out. On average you need 8 attempts, so on average 8 · 10 = 80 rounds. That is *r*/*cp* = 10 / (1/8) = 80.
+
+**Remember:**
+
+- **SL-game**: **scheduler** (adversary, chooses who moves) versus **luck** (may fix coin results).
+- One intervention fixing *g* of *h* results has probability **p = g/h**; **cp** = product of all interventions' probabilities.
+- **(*cp*, *r*)-strategy**: luck reaches safe within *r* expected rounds with combined probability *cp*.
+- **Theorem 2.4**: expected stabilization time **≤ *r*/*cp***, because the number of tries is **geometric** with mean **1/*cp***.
+
 ## 3. The randomized leader election algorithm
 
+**What this chapter is about:** a tiny coin-flipping algorithm, the proof that it works under coarse atomicity (with a time bound), and the trick that breaks it under fine atomicity.
+
 ### 3.1 The randomized leader election algorithm
+
+**In one sentence:** every processor reads all leader bits and flips a new coin for its own bit if it sees **no** leader while being 0, or **another** leader while being 1.
 
 The studied algorithm uses the **shared-memory model** for networks with the topology of a **complete graph** (every processor can read every other processor's register). Each processor *pᵢ* has a one-bit **leader register** leaderᵢ that it writes and everyone reads. The coin returns 0 or 1 with equal probability.
 
@@ -242,6 +368,15 @@ flowchart TD
     N --> S
 ```
 
+**The four situations in one table:**
+
+| My bit | What I see in the others | Do I flip a coin? |
+|---|---|---|
+| 0 | nobody is 1 (no leader) | **yes** (we need a leader) |
+| 0 | somebody is 1 | no (fine, there is a leader) |
+| 1 | somebody else is 1 too | **yes** (too many leaders) |
+| 1 | nobody else is 1 | no (fine, I am the only leader) |
+
 **Task LE:** the set of executions in which there exists a **single fixed leader throughout the execution**.
 
 **Safe configuration:**
@@ -253,7 +388,18 @@ In any fair execution that starts in a safe configuration, *pᵢ* is the single 
 
 **Additional context (Dolev §2.9).** the book's definition of a safe configuration has only the first two conditions; the lecture adds the third (no stale 1 in any local copy), which makes the "nobody ever writes again" argument immediate.
 
+> **Kid example.** Children in a room each hold a card: "1 = I am the boss" or "0 = I am not". Each child looks at everybody's card. If you hold 0 and nobody holds 1, the room has no boss, so you flip a coin to decide your card. If you hold 1 and someone else also holds 1, there are too many bosses, so you flip a coin again. In every other case you keep your card. The room is happy when exactly one child holds 1 and everybody has seen it.
+
+**Remember:**
+
+- Complete graph, shared memory, one **bit** leaderᵢ per processor; fair coin.
+- **Toss** if (leaderᵢ = 0 and **no** 1 seen) or (leaderᵢ = 1 and **another** 1 seen); otherwise do nothing.
+- **LE** = a **single fixed leader** throughout.
+- **Safe**: exactly one leader with bit 1 that has read only 0s; all others 0 and have read the leader's 1; no stale 1 copies (the lecture's third condition; the book has only the first two).
+
 ### 3.2 Lemma 2.6: stabilization within 2^O(n) expected rounds
+
+**In one sentence:** luck needs at most *n* coin results (one per processor) within 2*n* rounds, so *cp* ≥ 1/2ⁿ and the expected time is at most 2*n* · 2ⁿ rounds.
 
 **Lemma 2.6.** The algorithm stabilizes within 2^O(*n*) expected number of rounds. More precisely, using Theorem 2.4 the expected number of rounds is at most **2*n* · 2ⁿ**.
 
@@ -267,6 +413,13 @@ The proof presents a **(1/2ⁿ, 2*n*)-strategy** for luck. Then by Theorem 2.4 t
 Under **coarse atomicity**, line 06 is atomic: at the end of the step, leaderᵢ already holds the coin's result, and nobody could act in between.
 
 In other words, luck always makes the tossing processor choose the value that moves the system towards "exactly one leader".
+
+```mermaid
+flowchart LR
+  T["pi tosses a coin"] --> Q["are ALL the other<br/>leader bits 0?"]
+  Q -- "yes" --> One["luck says 1:<br/>pi becomes the only leader"]
+  Q -- "no" --> Zero["luck says 0:<br/>pi steps aside"]
+```
 
 **Observation 1 (no coin toss means already safe).** Within **less than 2*n* successive rounds**, each processor *pᵢ* reads all leader registers and, if necessary, tosses a coin and writes the outcome. So if **no processor tosses a coin within the first 2*n* rounds**, the system reaches a safe configuration: nobody writes during these rounds, so everybody reads fixed values. A processor with leaderᵢ = 0 that did not toss must have found some *pⱼ* with leaderⱼ = 1, and a processor with leaderⱼ = 1 that did not toss must have found that it is the **only** one with value 1.
 
@@ -295,6 +448,12 @@ cp \ge \left(\tfrac{1}{2}\right)^n = \frac{1}{2^n}.
 
 *Example:* with *n* = 3 processors, the bound is 2 · 3 · 2³ = 48 expected rounds; with *n* = 10 it is 2 · 10 · 1024 = 20 480. The bound grows exponentially with *n*, which is why the lecture calls this a simple but slow algorithm.
 
+| *n* | *r* = 2*n* | *cp* = 1/2ⁿ | bound *r*/*cp* = 2*n* · 2ⁿ |
+|---|---|---|---|
+| 3 | 6 | 1/8 | 48 |
+| 5 | 10 | 1/32 | 320 |
+| 10 | 20 | 1/1024 | 20 480 |
+
 ```mermaid
 flowchart LR
     A["Any configuration"] -- "luck fixes every coin:<br/>≤ n tosses, ≤ 2n rounds" --> B["Exactly one leader,<br/>everyone has read it (safe)"]
@@ -303,7 +462,32 @@ flowchart LR
 
 **Technical clarification.** One sentence of the lecture says "Luck wins the game within 2ⁿ rounds"; the rest of the lecture, the rest of the proof and the book all say **2*n*** rounds, which is what the bound 2*n*·2ⁿ uses.
 
+**A small run with luck, *n* = 3** (bits of *p*₁, *p*₂, *p*₃; start: everybody is 1):
+
+| Step | Who moves | What it sees | Tosses? | Luck fixes | Bits afterwards |
+|---|---|---|---|---|---|
+| start | — | — | — | — | 1, 1, 1 |
+| 1 | *p*₁ | it is 1, others are 1 | yes | not all others 0 ⇒ **0** | 0, 1, 1 |
+| 2 | *p*₂ | it is 1, *p*₃ is 1 | yes | not all others 0 ⇒ **0** | 0, 0, 1 |
+| 3 | *p*₃ | it is 1, others are 0 | no | — | 0, 0, 1 |
+| 4 | *p*₁, *p*₂ | they are 0, *p*₃ is 1 | no | — | 0, 0, 1 |
+
+Luck fixed 2 coins, so this run happens with probability ½ · ½ = 1/4, which is more than the worst case 1/2³ = 1/8.
+
+> **Kid example.** In the boss game, a friendly fairy (luck) secretly decides each coin: "if nobody else is boss, you become boss; otherwise you are not". Each child needs at most one coin flip, so the fairy needs at most *n* lucky flips, and the chance that real coins do exactly what the fairy wants is at least 1/2ⁿ. With 3 children that is 1 in 8, so on average about 8 tries of at most 6 rounds each: 48 rounds.
+
+**Remember:**
+
+- **Lemma 2.6**: expected stabilization **≤ 2*n* · 2ⁿ ∈ 2^O(*n*)** rounds (coarse atomicity).
+- Luck's strategy: all others 0 ⇒ fix **1**; otherwise fix **0**.
+- Obs. 1: no toss within **2*n*** rounds ⇒ already safe. Obs. 2: after the first toss a 1 exists, and some leaderₖ = 1 **forever**.
+- Each processor tosses **at most once** ⇒ ≤ *n* interventions ⇒ **cp ≥ 1/2ⁿ**; *r* = **2*n*** ⇒ (1/2ⁿ, 2*n*)-strategy.
+- Examples: *n* = 3 ⇒ 48; *n* = 10 ⇒ 20 480 (exponential, slow).
+- The slide's "2ⁿ rounds" is a typo for **2*n***.
+
 ### 3.3 Lemma 2.7: no stabilization under fine atomicity
+
+**In one sentence:** if the scheduler can see each coin before it is written, it waits until everyone has the same result and then lets them all write together, forever.
 
 **Lemma 2.7.** The algorithm is **not** self-stabilizing under fine atomicity (where a coin toss is a separate atomic step).
 
@@ -334,15 +518,38 @@ The system never has exactly one leader, so it never stabilizes. The lecture ani
 
 The lesson: **the exact atomicity assumption decides whether a randomized algorithm works.** Under coarse atomicity the scheduler cannot react to the coin before it is written, so it cannot keep everyone in step.
 
+> **Kid example.** Five children all stand (all are "boss"). Each must flip a coin. The naughty teacher watches each coin land on the table **before** the child acts. If a child gets "stay standing", the teacher says "flip again". When a child finally gets "sit", the teacher says "freeze, don't sit yet". Once all five are frozen with "sit", the teacher says "go!" and all sit together. Then the same trick with "stand". The class is never left with exactly one child standing.
+
+**Remember:**
+
+- **Lemma 2.7**: **not** self-stabilizing under **fine** atomicity.
+- Scheduler's trick: see each coin, **re-toss** until it shows the value it wants, **pause before the write**, then release everybody together: all 1 ⇒ all 0 ⇒ all 1 …
+- The schedule is still **fair** (with probability 1).
+- Lesson: the **atomicity** assumption decides whether a randomized algorithm works.
+
 ## 4. Summary
 
+**What this chapter is about:** the whole lecture on one page.
+
 ### 4.1 Recap
+
+**In one sentence:** identical processors need luck to choose a leader; coins work when the scheduler cannot peek (coarse atomicity), taking at most 2*n* · 2ⁿ expected rounds, and fail when it can (fine atomicity).
 
 - In **anonymous** complete graphs, leader election needs **symmetry breaking**. A **deterministic** rule ("stand if nobody stands, else sit") works under a **central daemon** but **no deterministic solution exists under a distributed daemon**.
 - **Randomized self-stabilization:** from any configuration, under any fair scheduler, a safe configuration is reached within a finite (expected) number of rounds.
 - **Coarse atomicity** (toss and write in one step) gives the adversary less power than **fine atomicity** (toss as a separate step).
 - **SL-game:** scheduler versus luck. If luck has a **(*cp*, *r*)-strategy**, the algorithm stabilizes within **r/cp** expected rounds (**Theorem 2.4**), because the number of tries is geometric with mean 1/*cp*.
 - **Algorithm:** toss a coin if you are 0 and see no leader, or you are 1 and see another leader. Under coarse atomicity luck has a **(1/2ⁿ, 2*n*)-strategy**, giving at most **2*n*·2ⁿ ∈ 2^O(*n*)** expected rounds (**Lemma 2.6**). Under fine atomicity the scheduler can prevent stabilization forever (**Lemma 2.7**).
+
+```mermaid
+flowchart LR
+  A["anonymous processors:<br/>need symmetry breaking"] --> B["central daemon:<br/>deterministic rule works"]
+  A --> C["distributed daemon:<br/>no deterministic rule"] --> D["use coins"]
+  D --> E["coarse atomicity:<br/>≤ 2n·2ⁿ expected rounds<br/>(Lemma 2.6)"]
+  D --> F["fine atomicity:<br/>scheduler wins forever<br/>(Lemma 2.7)"]
+```
+
+> **Kid example.** The whole story: identical twins cannot choose one phone answerer if they always act together. Flipping coins helps, as long as the naughty teacher cannot look at the coins before the twins act. If the teacher can look, the teacher can always keep the twins in step, and they never choose.
 
 ## Revision notes and references
 
