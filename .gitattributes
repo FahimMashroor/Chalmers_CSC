@@ -1,0 +1,3 @@
+# Store all text files with Unix (LF) line endings, so they look the same on every computer.
+* text=auto eol=lf
+*.md text eol=lf
